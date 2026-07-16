@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none" role="img" aria-label="Joseph Mews">
+  <rect width="200" height="200" rx="44" fill="#D9A84B"/>
+  <text
+    x="100"
+    y="86"
+    text-anchor="middle"
+    font-family="Georgia, 'Times New Roman', Times, serif"
+    font-size="34"
+    font-weight="400"
+    fill="#000000"
+  >Joseph</text>
+  <text
+    x="100"
+    y="128"
+    text-anchor="middle"
+    font-family="Georgia, 'Times New Roman', Times, serif"
+    font-size="34"
+    font-weight="400"
+    fill="#000000"
+  >Mews</text>
+</svg>
