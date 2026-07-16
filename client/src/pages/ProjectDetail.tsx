@@ -1,35 +1,30 @@
 // Joseph Mews — Project (Opportunity) Detail
 // Mirrors the rhythm of PropertyDetail: hero, title, sectioned content,
-// and ends with two premium CTAs (View Projection · Run Numbers).
-import { useLocation, useRoute } from "wouter";
+// ending with a Contact Sales sticky CTA.
+import { useRoute } from "wouter";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { ModalShell, SuccessState } from "@/components/ModalShell";
-import { getOpportunity, type Opportunity, type OpportunityStatus, type UnitOption } from "@/lib/explore";
+import { getOpportunity, type Opportunity, type OpportunityStatus } from "@/lib/explore";
 import { fmt, investor } from "@/lib/data";
 import { advisorEmail } from "@/lib/advisor";
 import { ProjectionSection } from "@/components/ProjectionSection";
 import {
   ArrowUpRight,
   TrendingUp,
-  Calculator,
   MapPin,
   Calendar,
   Building2,
-  Check,
   Phone,
   Mail,
   CalendarDays,
-  ShieldCheck,
 } from "lucide-react";
 import NotFound from "./NotFound";
 
 export default function ProjectDetail() {
   const [, params] = useRoute<{ id: string }>("/explore/:id");
-  const [, navigate] = useLocation();
   const opp = params?.id ? getOpportunity(params.id) : null;
 
-  const [reserveOpen, setReserveOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
 
   // Calculator "Speak to Advisor" lands on #contact — open the sheet once.
@@ -43,19 +38,6 @@ export default function ProjectDetail() {
   if (!opp) return <NotFound />;
 
   const isInactive = opp.status === "Sold Out";
-  const isComingSoon = opp.status === "Coming Soon";
-
-  const handleViewProjection = () => {
-    const el = document.getElementById("projection-anchor");
-    if (el) {
-      const top = el.getBoundingClientRect().top + window.scrollY - 80;
-      window.scrollTo({ top, behavior: "smooth" });
-    }
-  };
-
-  const handleRunNumbers = () => {
-    navigate(`/calculator/explore/${opp.id}`);
-  };
 
   return (
     <AppShell backTo="/explore" showNav={false}>
@@ -86,7 +68,7 @@ export default function ProjectDetail() {
         </div>
 
         {/* SECTION 1: AT A GLANCE */}
-        <Section eyebrow="Section One" title="At a Glance">
+        <Section title="At a Glance">
           <div className="mb-6">
             <p className="label-eyebrow mb-3">Starting Price</p>
             <h2 className="font-serif num-hero leading-none tracking-tight tabular-nums mb-3">
@@ -104,7 +86,6 @@ export default function ProjectDetail() {
 
           <div className="grid grid-cols-2 gap-x-3 gap-y-5 pt-5 border-t border-border">
             <DataPoint label="Gross Yield" value={`${opp.grossYield.toFixed(1)}%`} sub="Estimated" />
-            <DataPoint label="Net Yield" value={`${opp.netYield.toFixed(1)}%`} sub="Estimated · After costs" />
             <DataPoint label="Completion" value={opp.expectedCompletion} sub={opp.tenure} />
             <DataPoint
               label="Availability"
@@ -119,7 +100,6 @@ export default function ProjectDetail() {
         {/* SECTION 2: FORWARD PROJECTION */}
         <div id="projection-anchor" />
         <ProjectionSection
-          eyebrow="Section Two"
           title="Projection"
           input={{
             startValue: opp.fromPrice,
@@ -137,19 +117,8 @@ export default function ProjectDetail() {
 
         <Divider />
 
-        {/* SECTION 3: AVAILABLE UNITS */}
-        <Section eyebrow="Section Three" title="Available Units">
-          <div className="space-y-3">
-            {opp.unitTypes.map((u) => (
-              <UnitRow key={u.type} unit={u} disabled={isInactive || isComingSoon} />
-            ))}
-          </div>
-        </Section>
-
-        <Divider />
-
-        {/* SECTION 4: HIGHLIGHTS */}
-        <Section eyebrow="Section Four" title="Why This Opportunity">
+        {/* HIGHLIGHTS */}
+        <Section title="Why This Opportunity">
           <ul className="space-y-5">
             {opp.highlights.map((h, i) => (
               <li
@@ -169,7 +138,7 @@ export default function ProjectDetail() {
         <Divider />
 
         {/* SECTION 5: KEY FACTS */}
-        <Section eyebrow="Section Five" title="Key Facts">
+        <Section title="Key Facts">
           <div className="space-y-4">
             <InfoRow icon={Building2} label="Developer" value={opp.developer} />
             <InfoRow icon={MapPin} label="Location" value={`${opp.city} · ${opp.postcode}`} />
@@ -195,52 +164,13 @@ export default function ProjectDetail() {
 
         <div className="h-6" />
 
-        {/* Secondary actions — keep projection / calculator inline */}
-        <div className="hairline mb-6" />
-        <div className="grid grid-cols-2 gap-3 mb-2 animate-fade-up">
-          <button
-            onClick={handleViewProjection}
-            disabled={isInactive}
-            className={`tap press flex items-center justify-center gap-2 py-3.5 rounded-sm border border-border text-foreground/85 text-[12px] tracking-[0.12em] uppercase transition-opacity ${
-              isInactive ? "opacity-40 cursor-not-allowed" : "active:bg-card/60"
-            }`}
-          >
-            <TrendingUp className="w-3.5 h-3.5 text-primary" strokeWidth={1.5} />
-            Projection
-          </button>
-
-          <button
-            onClick={handleRunNumbers}
-            disabled={isInactive}
-            className={`tap press flex items-center justify-center gap-2 py-3.5 rounded-sm border border-border text-foreground/85 text-[12px] tracking-[0.12em] uppercase transition-opacity ${
-              isInactive ? "opacity-40 cursor-not-allowed" : "active:bg-card/60"
-            }`}
-          >
-            <Calculator className="w-3.5 h-3.5 text-primary" strokeWidth={1.5} />
-            Run Numbers
-          </button>
-        </div>
-
         {/* Spacer so sticky CTA bar never overlaps last content */}
         <div className="h-44" />
       </div>
 
-      {/* STICKY CONVERSION CTA — Buy Now (primary) + Contact Sales */}
-      <StickyCta
-        opp={opp}
-        isInactive={isInactive}
-        isComingSoon={isComingSoon}
-        onBuy={() => setReserveOpen(true)}
-        onContact={() => setContactOpen(true)}
-      />
+      {/* STICKY CTA — Contact Sales */}
+      <StickyCta onContact={() => setContactOpen(true)} />
 
-      {reserveOpen && (
-        <ReserveSheet
-          opp={opp}
-          isComingSoon={isComingSoon}
-          onClose={() => setReserveOpen(false)}
-        />
-      )}
       {contactOpen && (
         <ContactSheet opp={opp} onClose={() => setContactOpen(false)} />
       )}
@@ -251,11 +181,9 @@ export default function ProjectDetail() {
 /* ---------- helpers (mirrored from PropertyDetail) ---------- */
 
 function Section({
-  eyebrow,
   title,
   children,
 }: {
-  eyebrow: string;
   title: string;
   children: React.ReactNode;
 }) {
@@ -263,7 +191,6 @@ function Section({
     <section className="py-7 animate-fade-up">
       <div className="flex items-baseline justify-between mb-6">
         <div>
-          <p className="label-eyebrow mb-1.5">{eyebrow}</p>
           <h3 className="font-serif text-xl tracking-tight">{title}</h3>
         </div>
       </div>
@@ -296,44 +223,6 @@ function DataPoint({
           {sub}
         </p>
       )}
-    </div>
-  );
-}
-
-function UnitRow({ unit, disabled }: { unit: UnitOption; disabled: boolean }) {
-  const isSold = unit.available === 0;
-  return (
-    <div
-      className={`flex items-center justify-between gap-4 px-4 py-4 rounded-sm border ${
-        isSold || disabled ? "border-border opacity-70" : "border-border bg-card/40"
-      }`}
-    >
-      <div className="min-w-0">
-        <p className="text-sm font-medium mb-1">{unit.type}</p>
-        <p className="text-[11px] text-muted-foreground tabular-nums">
-          From {unit.sqftFrom} sq ft
-          {!disabled && !isSold && (
-            <>
-              {" · "}
-              <span className="text-foreground/70">
-                {unit.available} of {unit.total} available
-              </span>
-            </>
-          )}
-          {isSold && (
-            <>
-              {" · "}
-              <span className="text-muted-foreground">Fully reserved</span>
-            </>
-          )}
-        </p>
-      </div>
-      <div className="text-right shrink-0">
-        <p className="label-eyebrow mb-1">From</p>
-        <p className="font-serif text-base tabular-nums">
-          {fmt.currency(unit.fromPrice)}
-        </p>
-      </div>
     </div>
   );
 }
@@ -382,159 +271,26 @@ function InfoRow({
 
 /* ---------- Sticky conversion CTA ---------- */
 
-function StickyCta({
-  opp,
-  isInactive,
-  isComingSoon,
-  onBuy,
-  onContact,
-}: {
-  opp: Opportunity;
-  isInactive: boolean;
-  isComingSoon: boolean;
-  onBuy: () => void;
-  onContact: () => void;
-}) {
-  const buyLabel = isInactive
-    ? "Sold Out"
-    : isComingSoon
-    ? "Request Allocation"
-    : "Buy Now";
-
+function StickyCta({ onContact }: { onContact: () => void }) {
   return (
     <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-40 pointer-events-none">
-      {/* gradient fade so content doesn't slam into the bar */}
       <div className="h-6 bg-gradient-to-t from-background to-transparent" />
       <div className="bg-background/95 backdrop-blur-md border-t border-border pointer-events-auto">
         <div className="page-px pt-3.5 pb-3">
-          <div className="flex gap-2.5">
-            <button
-              onClick={onBuy}
-              disabled={isInactive}
-              className={`tap press flex-1 flex items-center justify-center gap-2 py-3.5 rounded-sm font-medium tracking-[0.08em] text-[12.5px] uppercase transition-opacity ${
-                isInactive
-                  ? "bg-muted/40 text-muted-foreground cursor-not-allowed"
-                  : "bg-primary text-primary-foreground active:opacity-90"
-              }`}
-            >
-              <Check className="w-3.5 h-3.5" strokeWidth={2} />
-              {buyLabel}
-            </button>
-            <button
-              onClick={onContact}
-              className="tap press flex items-center justify-center gap-2 py-3.5 px-5 rounded-sm border border-primary/60 text-primary text-[12.5px] tracking-[0.08em] uppercase active:bg-primary/5 transition-colors"
-            >
-              <Phone className="w-3.5 h-3.5" strokeWidth={1.75} />
-              Contact
-            </button>
-          </div>
+          <button
+            onClick={onContact}
+            className="tap press w-full flex items-center justify-center gap-2 py-3.5 rounded-sm bg-primary text-primary-foreground font-medium tracking-[0.08em] text-[12.5px] uppercase active:opacity-90 transition-opacity"
+          >
+            <Phone className="w-3.5 h-3.5" strokeWidth={1.75} />
+            Contact Sales
+          </button>
           <p className="text-[10.5px] text-muted-foreground/75 text-center mt-2.5 leading-snug">
-            Reservations handled by your advisor
+            Your advisor will handle next steps
           </p>
         </div>
         <div className="pb-safe" />
       </div>
     </div>
-  );
-}
-
-/* ---------- Reserve / Allocation sheet ---------- */
-
-function ReserveSheet({
-  opp,
-  isComingSoon,
-  onClose,
-}: {
-  opp: Opportunity;
-  isComingSoon: boolean;
-  onClose: () => void;
-}) {
-  const [selectedUnit, setSelectedUnit] = useState<string>(
-    opp.unitTypes.find((u) => u.available > 0)?.type ?? opp.unitTypes[0].type,
-  );
-  const [submitted, setSubmitted] = useState(false);
-
-  const headline = isComingSoon ? "Request Allocation" : "Reserve a Unit";
-  const cta = isComingSoon ? "Request priority access" : "Submit reservation";
-
-  return (
-    <ModalShell onClose={onClose} title={headline}>
-      {!submitted ? (
-        <>
-          <p className="text-[12.5px] text-muted-foreground leading-relaxed mb-6">
-            {isComingSoon
-              ? `Join the priority list for ${opp.name}. Allocations open before public release.`
-              : `Place a soft reservation on a unit at ${opp.name}. No payment is taken until contracts are issued.`}
-          </p>
-
-          <p className="label-eyebrow mb-3">Preferred Unit Type</p>
-          <div className="space-y-2 mb-6">
-            {opp.unitTypes.map((u) => {
-              const sold = u.available === 0;
-              const active = selectedUnit === u.type;
-              return (
-                <button
-                  key={u.type}
-                  onClick={() => !sold && setSelectedUnit(u.type)}
-                  disabled={sold}
-                  className={`tap press w-full flex items-center justify-between gap-3 px-3.5 py-3 rounded-sm border text-left transition-colors ${
-                    sold
-                      ? "border-border opacity-40 cursor-not-allowed"
-                      : active
-                      ? "border-primary bg-primary/8"
-                      : "border-border active:bg-card/60"
-                  }`}
-                >
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-medium mb-0.5">{u.type}</p>
-                    <p className="text-[10.5px] tracking-[0.1em] uppercase text-muted-foreground">
-                      {sold ? "Fully reserved" : `${u.available} available`}
-                    </p>
-                  </div>
-                  <p className="font-serif text-[13px] tabular-nums whitespace-nowrap">
-                    From {fmt.currency(u.fromPrice)}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="rounded-sm border border-dashed border-border px-3.5 py-3 mb-6 flex items-start gap-2.5">
-            <ShieldCheck
-              className="w-3.5 h-3.5 mt-0.5 text-primary shrink-0"
-              strokeWidth={1.5}
-            />
-            <p className="text-[11.5px] text-muted-foreground/85 leading-relaxed">
-              Your advisor <span className="text-foreground/85">{investor.advisor}</span>{" "}
-              will confirm your reservation within 24 hours and walk you through next steps.
-            </p>
-          </div>
-
-          <button
-            onClick={() => setSubmitted(true)}
-            className="tap press w-full py-3.5 rounded-sm bg-primary text-primary-foreground font-medium tracking-[0.08em] text-[12.5px] uppercase active:opacity-90 transition-opacity"
-          >
-            {cta}
-          </button>
-          <button
-            onClick={onClose}
-            className="tap w-full py-3 mt-2 text-[12px] tracking-[0.12em] uppercase text-muted-foreground active:text-foreground transition-colors"
-          >
-            Cancel
-          </button>
-        </>
-      ) : (
-        <SuccessState
-          headline={isComingSoon ? "You're on the priority list" : "Reservation received"}
-          body={
-            isComingSoon
-              ? `${investor.advisor} will be in touch as soon as allocations open.`
-              : `${investor.advisor} will confirm your reservation within 24 hours.`
-          }
-          onClose={onClose}
-        />
-      )}
-    </ModalShell>
   );
 }
 

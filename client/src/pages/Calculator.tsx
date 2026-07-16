@@ -154,7 +154,7 @@ function CalculatorBody({
   const annualRent = monthlyRent * 12;                                    // (1)
   const annualCosts = managementFee + serviceCharge + mortgage;           // (2)
   const netAnnualIncome = annualRent - annualCosts;                       // (3)
-  const netYield = price > 0 ? (netAnnualIncome / price) * 100 : 0;
+  const grossYieldPct = price > 0 ? (annualRent / price) * 100 : 0;
   const capitalGain = result.totalCapitalGain;                            // (5)
   const capitalGainPct = price > 0 ? (capitalGain / price) * 100 : 0;
   const totalReturn = result.totalReturn;                                 // (8)
@@ -293,9 +293,9 @@ function CalculatorBody({
               sub={`Year 1 · ${fmt.currency(annualRent)} gross`}
             />
             <Output
-              label="Net Yield"
-              value={`${netYield.toFixed(2)}%`}
-              sub="Year 1 · after costs"
+              label="Gross Yield"
+              value={`${grossYieldPct.toFixed(2)}%`}
+              sub="Year 1 · before costs"
             />
             <Output
               label="Capital Growth"

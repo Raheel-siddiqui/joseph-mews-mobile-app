@@ -66,7 +66,7 @@ export default function PartialDashboard() {
         <div className="space-y-5 mb-10">
           <div>
             <p className="text-[10px] tracking-[0.16em] uppercase text-muted-foreground mb-1">
-              Net Yield
+              Gross Yield
             </p>
             <p className="font-serif text-lg tabular-nums">—</p>
           </div>
@@ -114,7 +114,7 @@ export default function PartialDashboard() {
                   </p>
                 </div>
                 <div>
-                  <p className="label-eyebrow mb-1">Yield</p>
+                  <p className="label-eyebrow mb-1">Gross Yield</p>
                   <p className="font-serif text-sm tabular-nums text-muted-foreground">
                     —
                   </p>

@@ -24,7 +24,6 @@ interface Props {
   // Display label for assumption labels (e.g. "Mortgage rate" only shows if relevant)
   mortgageRate?: number; // % — pass when relevant
   hasMortgage?: boolean;
-  eyebrow?: string; // overrides default
   title?: string;
 }
 
@@ -34,7 +33,6 @@ export function ProjectionSection({
   input,
   mortgageRate,
   hasMortgage,
-  eyebrow = "Forward View",
   title = "Projection",
 }: Props) {
   const [horizon, setHorizon] = useState<ProjectionHorizon>(10);
@@ -63,7 +61,6 @@ export function ProjectionSection({
     <section className="py-7 animate-fade-up">
       <div className="flex items-baseline justify-between mb-6">
         <div>
-          <p className="label-eyebrow mb-1.5">{eyebrow}</p>
           <h3 className="font-serif text-xl tracking-tight">{title}</h3>
         </div>
         <HorizonTabs value={horizon} onChange={setHorizon} />

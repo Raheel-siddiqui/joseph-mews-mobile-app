@@ -50,7 +50,7 @@ export default function EmptyDashboard() {
         <div className="space-y-5 mb-4 opacity-60">
           <div>
             <p className="text-[10px] tracking-[0.16em] uppercase text-muted-foreground mb-1">
-              Net Yield
+              Gross Yield
             </p>
             <p className="font-serif text-lg tabular-nums">—</p>
           </div>

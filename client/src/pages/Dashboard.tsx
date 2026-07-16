@@ -9,7 +9,6 @@ import { AppShell } from "@/components/AppShell";
 import {
   portfolio,
   properties,
-  activities,
   investor,
   fmt,
   portfolioHistory,
@@ -23,7 +22,6 @@ import { getPortfolioInsights, type Insight } from "@/lib/insights";
 import {
   ArrowUpRight,
   ArrowRight,
-  Circle,
   ArrowDownRight,
   Sparkle,
   Lightbulb,
@@ -67,7 +65,6 @@ export default function Dashboard() {
 
   // Show only top 2 properties as preview
   const previewProperties = properties.slice(0, 2);
-  const previewActivities = activities.slice(0, 3);
   const insight = getRegionInsight();
 
   return (
@@ -152,10 +149,10 @@ export default function Dashboard() {
         {/* KPI pair — Yield + Net Cash Flow, with change indicators */}
         <div className="space-y-5 mb-11 animate-fade-up" style={{ animationDelay: "180ms" }}>
           <KpiRow
-            label="Net Yield"
-            sublabel="Annualised · after all costs"
-            value={fmt.pctPlain(portfolio.netYield)}
-            delta={`+${portfolio.netYieldDelta.toFixed(2)} pts`}
+            label="Gross Yield"
+            sublabel="Annualised · before costs"
+            value={fmt.pctPlain(portfolio.grossYield)}
+            delta={`+${portfolio.grossYieldDelta.toFixed(2)} pts`}
             deltaContext="vs last year"
             positive
           />
@@ -197,10 +194,10 @@ export default function Dashboard() {
             </Link>
             <div className="hairline" />
             <HighlightRow
-              label="Avg Net Yield"
+              label="Avg Gross Yield"
               name="Across all properties"
-              value={fmt.pctPlain(intelligence.avgNetYield)}
-              meta="net yield"
+              value={fmt.pctPlain(intelligence.avgGrossYield)}
+              meta="gross yield"
               static
             />
           </div>
@@ -274,52 +271,6 @@ export default function Dashboard() {
                   />
                 </div>
               </Link>
-            ))}
-          </div>
-        </div>
-
-        <div className="hairline mb-10" />
-
-        {/* RECENT ACTIVITY */}
-        <div className="mb-8 animate-fade-up" style={{ animationDelay: "360ms" }}>
-          <div className="flex items-baseline justify-between mb-6">
-            <div>
-              <p className="label-eyebrow mb-1">Recent</p>
-              <h3 className="font-serif text-xl">Activity</h3>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {previewActivities.map((a) => (
-              <div
-                key={a.id}
-                className="flex items-start gap-3 py-1"
-              >
-                <div className="pt-1.5">
-                  {a.isNew ? (
-                    <Circle
-                      className="w-1.5 h-1.5 text-primary fill-primary"
-                      strokeWidth={0}
-                    />
-                  ) : (
-                    <Circle
-                      className="w-1.5 h-1.5 text-muted-foreground/40 fill-muted-foreground/40"
-                      strokeWidth={0}
-                    />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium leading-snug">
-                    {a.title}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {a.detail}
-                  </p>
-                </div>
-                <p className="text-[10px] tracking-wider uppercase text-muted-foreground/80 pt-1.5 whitespace-nowrap">
-                  {a.timestamp}
-                </p>
-              </div>
             ))}
           </div>
         </div>

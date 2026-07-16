@@ -263,16 +263,13 @@ export const portfolio = {
   get totalReturnPct() {
     return (this.totalReturn / this.totalInvested) * 100;
   },
-  get netYield() {
-    return ((this.netCashFlow * 12) / this.currentValue) * 100;
-  },
   get grossYield() {
     return ((this.monthlyRent * 12) / this.currentValue) * 100;
   },
   // 12-month context (vs prior year)
   trailing12mReturn: 178420,
   trailing12mReturnPct: 7.4,
-  netYieldDelta: 0.18,        // +0.18 pts vs last year
+  grossYieldDelta: 0.18,      // +0.18 pts vs last year
   netCashFlowDelta: 245,      // +£245 vs last month
   netCashFlowDeltaPct: 9.6,
 };

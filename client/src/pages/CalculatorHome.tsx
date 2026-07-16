@@ -184,7 +184,7 @@ export default function CalculatorHome() {
     annualServiceCharge + annualManagementFee + annualMortgage;
   const netAnnualIncome = annualGrossRent - annualCosts;
   const netMonthlyIncome = Math.round(netAnnualIncome / 12);
-  const netYield = price > 0 ? (netAnnualIncome / price) * 100 : 0;
+  const grossYieldPct = price > 0 ? (annualGrossRent / price) * 100 : 0;
 
   // SDLT (rough): 5% across the board for non-UK residents on overseas surcharge
   // territory; UK residents simplified at 3% for additional dwellings. This is
@@ -482,7 +482,7 @@ export default function CalculatorHome() {
           holding={holding}
           totalReturn={result.totalReturn}
           netMonthlyIncome={netMonthlyIncome}
-          netYield={netYield}
+          grossYield={grossYieldPct}
           monthlyRent={monthlyRent}
           onView={() => {
             setStep(5);
@@ -524,8 +524,8 @@ export default function CalculatorHome() {
               sub="After all costs"
             />
             <Output
-              label="Net Yield"
-              value={`${netYield.toFixed(2)}%`}
+              label="Gross Yield"
+              value={`${grossYieldPct.toFixed(2)}%`}
               sub="Year 1"
             />
             <Output
@@ -1356,7 +1356,7 @@ function QuickReturnSummary({
   holding,
   totalReturn,
   netMonthlyIncome,
-  netYield,
+  grossYield,
   monthlyRent,
   onView,
 }: {
@@ -1365,7 +1365,7 @@ function QuickReturnSummary({
   holding: HoldingPeriod;
   totalReturn: number;
   netMonthlyIncome: number;
-  netYield: number;
+  grossYield: number;
   monthlyRent: number;
   onView: () => void;
 }) {
@@ -1396,8 +1396,8 @@ function QuickReturnSummary({
           value={fmt.currency(netMonthlyIncome)}
         />
         <MiniSummary
-          label="Net Yield"
-          value={`${netYield.toFixed(2)}%`}
+          label="Gross Yield"
+          value={`${grossYield.toFixed(2)}%`}
           tone="primary"
         />
       </div>

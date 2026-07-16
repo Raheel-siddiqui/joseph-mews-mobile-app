@@ -16,7 +16,7 @@ export interface Insight {
   metric?: string;         // optional bold number to anchor the card
 }
 
-const TARGET_NET_YIELD = 4.0;            // % — investor benchmark
+const TARGET_GROSS_YIELD = 5.0;          // % — investor benchmark
 const HIGH_CONCENTRATION_PCT = 50;       // single-city threshold
 
 // ---- helpers ---------------------------------------------------------------
@@ -40,7 +40,7 @@ function cityValueShare(): { city: string; pct: number; value: number }[] {
   return entries.sort((a, b) => b.pct - a.pct);
 }
 
-function avgNetYieldByCity(): { city: string; avg: number; count: number }[] {
+function avgGrossYieldByCity(): { city: string; avg: number; count: number }[] {
   const groups = new Map<string, Property[]>();
   properties.forEach((p) => {
     if (p.status !== "Tenanted") return;
@@ -51,7 +51,7 @@ function avgNetYieldByCity(): { city: string; avg: number; count: number }[] {
   const out: { city: string; avg: number; count: number }[] = [];
   groups.forEach((ps, city) => {
     const avg =
-      ps.reduce((s: number, p: Property) => s + p.netYield, 0) / ps.length;
+      ps.reduce((s: number, p: Property) => s + p.grossYield, 0) / ps.length;
     out.push({ city, count: ps.length, avg });
   });
   return out.sort((a, b) => b.avg - a.avg);
@@ -76,7 +76,7 @@ function concentrationInsight(): Insight | null {
 }
 
 function regionalYieldInsight(): Insight | null {
-  const ys = avgNetYieldByCity();
+  const ys = avgGrossYieldByCity();
   if (ys.length < 2) return null;
   const best = ys[0];
   const worst = ys[ys.length - 1];
@@ -86,7 +86,7 @@ function regionalYieldInsight(): Insight | null {
     tone: "positive",
     category: "Regional Performance",
     headline: `${best.city} properties are generating higher yield than ${worst.city}.`,
-    body: `${best.city} averages ${best.avg.toFixed(2)}% net vs ${worst.avg.toFixed(
+    body: `${best.city} averages ${best.avg.toFixed(2)}% gross vs ${worst.avg.toFixed(
       2
     )}% in ${worst.city}.`,
     metric: `${best.avg.toFixed(2)}%`,
@@ -94,24 +94,24 @@ function regionalYieldInsight(): Insight | null {
 }
 
 function yieldVsTargetInsight(): Insight | null {
-  const ny = portfolio.netYield;
-  if (ny >= TARGET_NET_YIELD) return null;
+  const gy = portfolio.grossYield;
+  if (gy >= TARGET_GROSS_YIELD) return null;
   return {
     id: "yield-vs-target",
     tone: "watch",
     category: "Income Performance",
-    headline: `Portfolio net yield is below target (${ny.toFixed(
+    headline: `Portfolio gross yield is below target (${gy.toFixed(
       1
-    )}% vs ${TARGET_NET_YIELD.toFixed(0)}% benchmark).`,
-    body: `High mortgage costs in London are dragging the headline figure down.`,
-    metric: `${ny.toFixed(1)}%`,
+    )}% vs ${TARGET_GROSS_YIELD.toFixed(0)}% benchmark).`,
+    body: `Review rental income and acquisition pricing with your advisor.`,
+    metric: `${gy.toFixed(1)}%`,
   };
 }
 
 function growthVsCashInsight(): Insight | null {
   const growthPct = portfolio.totalReturnPct;
-  const ny = portfolio.netYield;
-  if (growthPct < 5 || ny >= TARGET_NET_YIELD - 1) return null;
+  const gy = portfolio.grossYield;
+  if (growthPct < 5 || gy >= TARGET_GROSS_YIELD - 1) return null;
   return {
     id: "growth-vs-cash",
     tone: "neutral",
@@ -119,7 +119,7 @@ function growthVsCashInsight(): Insight | null {
     headline: `Strong capital growth, but cash flow is under-performing.`,
     body: `Capital +${growthPct.toFixed(
       1
-    )}% since purchase, yet net yield sits at ${ny.toFixed(
+    )}% since purchase, yet gross yield sits at ${gy.toFixed(
       1
     )}% — typical of a growth-weighted portfolio.`,
     metric: `+${growthPct.toFixed(0)}%`,

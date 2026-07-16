@@ -18,10 +18,9 @@ Reference for all headline metrics shown in the prototype, how they are calculat
 | **Capital growth (%)** — dashboard | `(totalCapitalGrowth / totalInvested) × 100` | `totalCapitalGrowth`, `totalInvested` (as above) |
 | **Capital growth over time range** | `endValue − startValue` on filtered portfolio history series | Monthly portfolio snapshots: `month`, `value`, `monthsAgo` (or dated valuations aggregated to portfolio level) |
 | **Capital growth % over time range** | `((endValue − startValue) / startValue) × 100` | Same time-series as above |
-| **Net yield (portfolio)** | `(netCashFlow × 12 / currentValue) × 100` | Portfolio: `netCashFlow` (monthly), `currentValue`; or derive from properties |
 | **Gross yield (portfolio)** | `(monthlyRent × 12 / currentValue) × 100` | Portfolio: `Σ monthlyRent`, `currentValue` |
+| **Gross yield delta** | `currentGrossYield − priorPeriodGrossYield` (pts) | Gross yield for current and comparison period (e.g. prior year) |
 | **Net cash flow (monthly)** | `Σ netMonthlyIncome` | Per property: `netMonthlyIncome` |
-| **Net yield delta** | `currentNetYield − priorPeriodNetYield` (pts) | Net yield for current and comparison period (e.g. prior year) |
 | **Net cash flow delta** | `currentNetCashFlow − priorMonthNetCashFlow` | Monthly net cash flow for current and prior month |
 | **Property count** | Count of properties linked to investor | Investor–property mapping |
 | **Tenanted count** | Count where `status = Tenanted` | Per property: `status` |
@@ -47,7 +46,6 @@ Reference for all headline metrics shown in the prototype, how they are calculat
 | **Net monthly income** | `monthlyRent − serviceCharge − managementFee − mortgage` | All four monthly cost/income fields |
 | **Annual net income** | `netMonthlyIncome × 12` or stored | `netMonthlyIncome` or `annualNetIncome` |
 | **Gross yield** | `(annualGrossRent / currentValue) × 100` where `annualGrossRent = monthlyRent × 12` | `monthlyRent`, `currentValue` |
-| **Net yield** | `(annualNetIncome / currentValue) × 100` | `annualNetIncome`, `currentValue` |
 | **Value change (chart range)** | `endValue − startValue` on filtered `valueHistory` | Time series per property: `{ month, value, monthsAgo }` |
 | **Value change % (chart range)** | `((end − start) / start) × 100` | Same value history |
 | **Occupancy** | Stored % | `occupancy` |
@@ -76,7 +74,7 @@ Reference for all headline metrics shown in the prototype, how they are calculat
 | **Annual costs (year 1)** | `serviceCharge + managementFee + annualMortgage` | All three annual figures |
 | **Net annual income (year 1)** | `annualGrossRent − annualCosts` | Rent and costs as above |
 | **Net monthly income** | `netAnnualIncome / 12` | `netAnnualIncome` |
-| **Net yield (calculator)** | `(netAnnualIncome / price) × 100` | `netAnnualIncome`, `price` |
+| **Gross yield (calculator)** | `(annualGrossRent / price) × 100` | `annualGrossRent`, `price` |
 | **Default LTV by risk** | Cautious 55%, Balanced 65%, Growth 75% | Investor selection: `riskAppetite` |
 
 ---
@@ -138,7 +136,7 @@ Used on Property Detail, Explore detail, and Calculator. Source: `lib/projection
 |--------|---------|---------------|
 | **Starting price** | Stored per opportunity | `fromPrice` |
 | **Gross yield (estimated)** | Stored % | `grossYield` |
-| **Net yield (estimated)** | Stored % | `netYield` |
+| **Gross yield (estimated)** | Stored % | `grossYield` |
 | **5-year capital growth (forecast)** | Stored % | `capitalGrowth5Y` |
 | **Units available** | `unitsAvailable / totalUnits` | Per development: unit counts by type |
 | **Filter: budget band** | `fromPrice ≤ budgetBand.max` | `fromPrice`, band config |
@@ -150,15 +148,15 @@ Used on Property Detail, Explore detail, and Calculator. Source: `lib/projection
 
 | Metric | Formula | Data required |
 |--------|---------|---------------|
-| **Best performer** | Highest `performanceScore` | Per property: `netYield`, `capitalGrowthPct` |
-| **Performance score** (income-producing) | `netYield × 1.2 + capitalGrowthPct × 0.4` | `netYield`, `capitalGrowthPct` |
+| **Best performer** | Highest `performanceScore` | Per property: `grossYield`, `capitalGrowthPct` |
+| **Performance score** (income-producing) | `grossYield × 1.2 + capitalGrowthPct × 0.4` | `grossYield`, `capitalGrowthPct` |
 | **Performance score** (non-income) | `capitalGrowthPct × 0.4` | `capitalGrowthPct` |
-| **Highest gross yield property** | Max `grossYield` among `netYield > 0` | `grossYield`, `netYield` per property |
-| **Avg net yield** | Mean `netYield` where `netYield > 0` | `netYield` for income-producing properties |
-| **Yield vs portfolio avg** | `property.netYield − avgNetYield` | Property `netYield`, portfolio average |
+| **Highest gross yield property** | Max `grossYield` among `grossYield > 0` | `grossYield` per property |
+| **Avg gross yield** | Mean `grossYield` where `grossYield > 0` | `grossYield` for income-producing properties |
+| **Yield vs portfolio avg** | `property.grossYield − avgGrossYield` | Property `grossYield`, portfolio average |
 | **City value share** | `(cityValue / portfolio.currentValue) × 100` | Per property: `city`, `currentValue` |
-| **Regional avg net yield** | Mean `netYield` for tenanted properties in city | `city`, `status`, `netYield` |
-| **Yield vs target** | Compare `portfolio.netYield` to benchmark (4.0%) | Portfolio net yield, config benchmark |
+| **Regional avg gross yield** | Mean `grossYield` for tenanted properties in city | `city`, `status`, `grossYield` |
+| **Yield vs target** | Compare `portfolio.grossYield` to benchmark (5.0%) | Portfolio gross yield, config benchmark |
 
 ---
 
@@ -200,7 +198,7 @@ Used on Property Detail, Explore detail, and Calculator. Source: `lib/projection
 | `ukMortgageRate` / `nonUkMortgageRate` | % | Calculator |
 | `managementFeePctOfRent` | % | Calculator defaults |
 | `serviceChargePctOfValue` | % | Calculator defaults |
-| `grossYield` / `netYield` per opportunity | % | Explore, calculator rent |
+| `grossYield` per opportunity | % | Explore, calculator rent |
 | `capitalGrowth5Y` per opportunity | % | Explore headline + annualisation |
 | SDLT bands | Band table | Production SDLT (prototype uses flat %) |
 
@@ -212,8 +210,7 @@ Used on Property Detail, Explore detail, and Calculator. Source: `lib/projection
 |------|----------------|-----------------|
 | **Capital growth (dashboard)** | Change in property **value** since purchase | Total return (capital + rent) |
 | **Total return (projection / calculator)** | Capital gain **+** cumulative rental income | Dashboard capital growth |
-| **Gross yield** | Rent before costs ÷ value | Net yield |
-| **Net yield** | Income after all costs ÷ value | Gross yield |
+| **Gross yield** | Rent before costs ÷ value | Primary yield metric in the app |
 | **Actual vs estimated** | Owned = actual where available; Explore = estimated | — |
 
 ---

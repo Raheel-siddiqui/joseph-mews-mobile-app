@@ -4,12 +4,12 @@
 import { properties, type Property } from "./data";
 
 // Only consider properties that are generating yield (exclude In Build / Vacant with 0 yield)
-const incomeProducing = properties.filter((p) => p.netYield > 0);
+const incomeProducing = properties.filter((p) => p.grossYield > 0);
 
-// Use net yield as the primary performance signal; fall back to capital growth %
+// Use gross yield as the primary performance signal; fall back to capital growth %
 function performanceScore(p: Property) {
-  // Income-producing: weighted blend of net yield and capital growth
-  if (p.netYield > 0) return p.netYield * 1.2 + p.capitalGrowthPct * 0.4;
+  // Income-producing: weighted blend of gross yield and capital growth
+  if (p.grossYield > 0) return p.grossYield * 1.2 + p.capitalGrowthPct * 0.4;
   // In-build: rely on capital growth only
   return p.capitalGrowthPct * 0.4;
 }
@@ -18,16 +18,19 @@ const sortedByPerformance = [...properties].sort(
   (a, b) => performanceScore(b) - performanceScore(a)
 );
 
-const sortedByYield = [...incomeProducing].sort((a, b) => b.netYield - a.netYield);
+const sortedByYield = [...incomeProducing].sort(
+  (a, b) => b.grossYield - a.grossYield
+);
 
 const sortedByCapitalGrowth = [...properties].sort(
   (a, b) => b.capitalGrowthPct - a.capitalGrowthPct
 );
 
-// Average net yield across income-producing properties
-const avgNetYield =
+// Average gross yield across income-producing properties
+const avgGrossYield =
   incomeProducing.length > 0
-    ? incomeProducing.reduce((sum, p) => sum + p.netYield, 0) / incomeProducing.length
+    ? incomeProducing.reduce((sum, p) => sum + p.grossYield, 0) /
+      incomeProducing.length
     : 0;
 
 // Average capital growth across all properties (incl. in-build)
@@ -39,7 +42,7 @@ export const intelligence = {
   lowestPerformer: sortedByPerformance[sortedByPerformance.length - 1],
   highestYield: sortedByYield[0],
   highestCapitalGrowth: sortedByCapitalGrowth[0],
-  avgNetYield,
+  avgGrossYield,
   avgCapitalGrowthPct,
 };
 
@@ -47,16 +50,16 @@ export const intelligence = {
 export type Signal = "above" | "below" | "neutral";
 
 export function yieldSignal(p: Property): Signal {
-  if (p.netYield === 0) return "neutral"; // in-build / vacant — no yield to compare
+  if (p.grossYield === 0) return "neutral"; // in-build / vacant — no yield to compare
   // Only flag as "above" / "below" if the difference is meaningful (> 0.05 pts)
-  const diff = p.netYield - intelligence.avgNetYield;
+  const diff = p.grossYield - intelligence.avgGrossYield;
   if (Math.abs(diff) < 0.05) return "neutral";
   return diff > 0 ? "above" : "below";
 }
 
 export function yieldDeltaLabel(p: Property): string | null {
-  if (p.netYield === 0) return null;
-  const diff = p.netYield - intelligence.avgNetYield;
+  if (p.grossYield === 0) return null;
+  const diff = p.grossYield - intelligence.avgGrossYield;
   if (Math.abs(diff) < 0.05) return null;
   const sign = diff > 0 ? "+" : "";
   return `${sign}${diff.toFixed(2)} pts vs avg`;
@@ -84,13 +87,14 @@ export function getRegionInsight(): string {
     }
   });
 
-  // Find region with highest avg yield (income-producing only)
+  // Find region with highest avg gross yield (income-producing only)
   let topYieldRegion = "";
   let topYield = 0;
   byRegion.forEach((props, region) => {
-    const earners = props.filter((p) => p.netYield > 0);
+    const earners = props.filter((p) => p.grossYield > 0);
     if (earners.length === 0) return;
-    const avg = earners.reduce((sum, p) => sum + p.grossYield, 0) / earners.length;
+    const avg =
+      earners.reduce((sum, p) => sum + p.grossYield, 0) / earners.length;
     if (avg > topYield) {
       topYield = avg;
       topYieldRegion = region;

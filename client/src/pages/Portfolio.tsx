@@ -78,13 +78,13 @@ export default function Portfolio() {
                     {signal === "above" ? "Above avg yield" : "Below avg yield"}
                   </p>
                 )}
-                {signal === "neutral" && p.netYield === 0 && (
+                {signal === "neutral" && p.grossYield === 0 && (
                   <p className="inline-flex items-center gap-1 text-[10px] tracking-[0.14em] uppercase mb-5 text-muted-foreground">
                     <Minus className="w-2.5 h-2.5" strokeWidth={2} />
                     Pre-income
                   </p>
                 )}
-                {signal === "neutral" && p.netYield > 0 && (
+                {signal === "neutral" && p.grossYield > 0 && (
                   <p className="inline-flex items-center gap-1 text-[10px] tracking-[0.14em] uppercase mb-5 text-muted-foreground">
                     <Minus className="w-2.5 h-2.5" strokeWidth={2} />
                     On portfolio average
@@ -104,7 +104,7 @@ export default function Portfolio() {
                   />
                   <Stat
                     label="Gross Yield"
-                    value={p.netYield > 0 ? fmt.pctPlain(p.grossYield) : "—"}
+                    value={p.grossYield > 0 ? fmt.pctPlain(p.grossYield) : "—"}
                   />
                 </div>
               </div>

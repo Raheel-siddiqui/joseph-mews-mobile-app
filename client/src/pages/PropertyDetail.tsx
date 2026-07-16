@@ -185,7 +185,7 @@ export default function PropertyDetail() {
 
         {/* SECTION 1: VALUE OVERVIEW */}
         <div id="section-overview" />
-        <Section eyebrow="Section One" title="Value">
+        <Section title="Value">
           <div className="mb-6">
             <p className="label-eyebrow mb-3">Current Valuation</p>
             <h2 className="font-serif num-hero leading-none tracking-tight tabular-nums mb-3">
@@ -233,7 +233,7 @@ export default function PropertyDetail() {
 
         {/* SECTION 2: VALUE GROWTH CHART */}
         <div id="section-performance" />
-        <Section eyebrow="Section Two" title="Value Over Time">
+        <Section title="Value Over Time">
           <div className="flex items-baseline justify-between mb-5">
             <div>
               <p className="text-[10px] tracking-[0.16em] uppercase text-muted-foreground mb-1">
@@ -262,7 +262,7 @@ export default function PropertyDetail() {
 
         {/* SECTION 3: INCOME & COSTS */}
         <div id="section-income" />
-        <Section eyebrow="Section Three" title="Income & Costs">
+        <Section title="Income & Costs">
           {isInBuild ? (
             <div className="py-8 text-center border border-dashed border-border rounded-sm">
               <p className="label-eyebrow mb-3">Property In Build</p>
@@ -342,7 +342,7 @@ export default function PropertyDetail() {
         <Divider />
 
         {/* SECTION 4: PERFORMANCE */}
-        <Section eyebrow="Section Four" title="Performance">
+        <Section title="Performance">
           <div className="space-y-7">
             <PerformanceRow
               label="Capital Growth"
@@ -358,12 +358,6 @@ export default function PropertyDetail() {
             />
             <div className="hairline" />
             <PerformanceRow
-              label="Net Yield"
-              sublabel={isInBuild ? "Not yet available" : "Actual · After all costs"}
-              value={isInBuild ? "—" : fmt.pctPlain(property.netYield)}
-            />
-            <div className="hairline" />
-            <PerformanceRow
               label="Occupancy"
               sublabel="Last 12 months"
               value={`${property.occupancy}%`}
@@ -376,7 +370,6 @@ export default function PropertyDetail() {
         {/* SECTION 5: FORWARD PROJECTION */}
         <div id="section-projection" />
         <ProjectionSection
-          eyebrow="Section Five"
           title="Projection"
           input={{
             startValue: property.currentValue,
@@ -397,7 +390,7 @@ export default function PropertyDetail() {
           <>
             <Divider />
             <div id="section-tenancy" />
-            <Section eyebrow="Tenancy" title="Current Tenant">
+            <Section title="Current Tenant">
               <div className="space-y-4">
                 <InfoRow
                   icon={User}
@@ -428,11 +421,9 @@ export default function PropertyDetail() {
 }
 
 function Section({
-  eyebrow,
   title,
   children,
 }: {
-  eyebrow: string;
   title: string;
   children: React.ReactNode;
 }) {
@@ -440,7 +431,6 @@ function Section({
     <section className="py-7 animate-fade-up">
       <div className="flex items-baseline justify-between mb-6">
         <div>
-          <p className="label-eyebrow mb-1.5">{eyebrow}</p>
           <h3 className="font-serif text-xl tracking-tight">{title}</h3>
         </div>
       </div>
