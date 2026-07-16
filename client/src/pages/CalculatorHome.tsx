@@ -8,8 +8,8 @@
 // projection engine, never replacing its formulas.
 
 import { useMemo, useState } from "react";
-import { useLocation } from "wouter";
 import { AppShell } from "@/components/AppShell";
+import { ContactAdvisorSheet } from "@/components/ContactAdvisorSheet";
 import { fmt } from "@/lib/data";
 import { opportunities, type UnitOption } from "@/lib/explore";
 import { projectInvestment } from "@/lib/projection";
@@ -61,10 +61,9 @@ const ASSUMPTIONS = {
 };
 
 export default function CalculatorHome() {
-  const [, navigate] = useLocation();
-
   // ----- Step 1: Deposit-led intent -----
   const [deposit, setDeposit] = useState<number>(50_000);
+  const [advisorOpen, setAdvisorOpen] = useState(false);
   const [risk, setRisk] = useState<RiskAppetite>("Balanced");
 
   // ----- Step 3: Investment selection (was Step 1) -----
@@ -591,7 +590,7 @@ export default function CalculatorHome() {
           setAssumptionsOpen={setOutlookAssumptionsOpen}
           isMortgage={isMortgage}
           mortgageRate={mortgageRate}
-          onSpeakToAdvisor={() => navigate(`/explore/${opp.id}#contact`)}
+          onSpeakToAdvisor={() => setAdvisorOpen(true)}
         />
         </div>
         )}
@@ -622,6 +621,13 @@ export default function CalculatorHome() {
 
         <div className="h-8" />
       </div>
+
+      {advisorOpen && (
+        <ContactAdvisorSheet
+          opp={opp}
+          onClose={() => setAdvisorOpen(false)}
+        />
+      )}
     </AppShell>
   );
 }

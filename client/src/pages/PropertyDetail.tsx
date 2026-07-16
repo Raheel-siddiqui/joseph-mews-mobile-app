@@ -185,7 +185,7 @@ export default function PropertyDetail() {
 
         {/* SECTION 1: VALUE OVERVIEW */}
         <div id="section-overview" />
-        <Section title="Value">
+        <Section>
           <div className="mb-6">
             <p className="label-eyebrow mb-3">Current Valuation</p>
             <h2 className="font-serif num-hero leading-none tracking-tight tabular-nums mb-3">
@@ -424,16 +424,18 @@ function Section({
   title,
   children,
 }: {
-  title: string;
+  title?: string;
   children: React.ReactNode;
 }) {
   return (
     <section className="py-7 animate-fade-up">
-      <div className="flex items-baseline justify-between mb-6">
-        <div>
-          <h3 className="font-serif text-xl tracking-tight">{title}</h3>
+      {title && (
+        <div className="flex items-baseline justify-between mb-6">
+          <div>
+            <h3 className="font-serif text-xl tracking-tight">{title}</h3>
+          </div>
         </div>
-      </div>
+      )}
       {children}
     </section>
   );

@@ -4,10 +4,9 @@
 import { useRoute } from "wouter";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { ModalShell, SuccessState } from "@/components/ModalShell";
-import { getOpportunity, type Opportunity, type OpportunityStatus } from "@/lib/explore";
-import { fmt, investor } from "@/lib/data";
-import { advisorEmail } from "@/lib/advisor";
+import { ContactAdvisorSheet } from "@/components/ContactAdvisorSheet";
+import { getOpportunity, type OpportunityStatus } from "@/lib/explore";
+import { fmt } from "@/lib/data";
 import { ProjectionSection } from "@/components/ProjectionSection";
 import {
   ArrowUpRight,
@@ -16,8 +15,6 @@ import {
   Calendar,
   Building2,
   Phone,
-  Mail,
-  CalendarDays,
 } from "lucide-react";
 import NotFound from "./NotFound";
 
@@ -27,11 +24,13 @@ export default function ProjectDetail() {
 
   const [contactOpen, setContactOpen] = useState(false);
 
-  // Calculator "Speak to Advisor" lands on #contact — open the sheet once.
+  // Deep-link #contact opens the sheet once (e.g. shared links).
   useEffect(() => {
     if (!opp) return;
     if (window.location.hash === "#contact") {
       setContactOpen(true);
+      // Clear hash so close/back stays on this page without re-opening.
+      window.history.replaceState(null, "", window.location.pathname);
     }
   }, [opp?.id]);
 
@@ -68,7 +67,7 @@ export default function ProjectDetail() {
         </div>
 
         {/* SECTION 1: AT A GLANCE */}
-        <Section title="At a Glance">
+        <Section>
           <div className="mb-6">
             <p className="label-eyebrow mb-3">Starting Price</p>
             <h2 className="font-serif num-hero leading-none tracking-tight tabular-nums mb-3">
@@ -172,7 +171,10 @@ export default function ProjectDetail() {
       <StickyCta onContact={() => setContactOpen(true)} />
 
       {contactOpen && (
-        <ContactSheet opp={opp} onClose={() => setContactOpen(false)} />
+        <ContactAdvisorSheet
+          opp={opp}
+          onClose={() => setContactOpen(false)}
+        />
       )}
     </AppShell>
   );
@@ -184,16 +186,18 @@ function Section({
   title,
   children,
 }: {
-  title: string;
+  title?: string;
   children: React.ReactNode;
 }) {
   return (
     <section className="py-7 animate-fade-up">
-      <div className="flex items-baseline justify-between mb-6">
-        <div>
-          <h3 className="font-serif text-xl tracking-tight">{title}</h3>
+      {title && (
+        <div className="flex items-baseline justify-between mb-6">
+          <div>
+            <h3 className="font-serif text-xl tracking-tight">{title}</h3>
+          </div>
         </div>
-      </div>
+      )}
       {children}
     </section>
   );
@@ -291,133 +295,5 @@ function StickyCta({ onContact }: { onContact: () => void }) {
         <div className="pb-safe" />
       </div>
     </div>
-  );
-}
-
-/* ---------- Contact Sales sheet ---------- */
-
-type ContactChannel = "schedule" | "callback" | "email";
-
-const CONTACT_SUCCESS: Record<
-  ContactChannel,
-  { headline: string; body: string }
-> = {
-  schedule: {
-    headline: "Call request received",
-    body: `${investor.advisor} will offer times for a 20-minute consultation within one business day.`,
-  },
-  callback: {
-    headline: "Callback requested",
-    body: `${investor.advisor} will call you today between 9am and 6pm GMT.`,
-  },
-  email: {
-    headline: "Email ready to send",
-    body: `We've prepared a message to ${investor.advisor}. Check your inbox for a copy, or they will reply directly.`,
-  },
-};
-
-function ContactSheet({
-  opp,
-  onClose,
-}: {
-  opp: Opportunity;
-  onClose: () => void;
-}) {
-  const [submitted, setSubmitted] = useState<ContactChannel | null>(null);
-  const email = advisorEmail();
-
-  const handleChannel = (channel: ContactChannel) => {
-    if (channel === "email") {
-      const subject = encodeURIComponent(`Enquiry — ${opp.name}`);
-      const body = encodeURIComponent(
-        `Hello ${investor.advisor},\n\nI would like to discuss ${opp.name} (${opp.reference}), including pricing, payment plans and allocation timing.\n\nKind regards,\n${investor.firstName}`,
-      );
-      window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
-    }
-    setSubmitted(channel);
-  };
-
-  const success = submitted ? CONTACT_SUCCESS[submitted] : null;
-
-  return (
-    <ModalShell onClose={onClose} title="Speak with your advisor">
-      {!submitted || !success ? (
-        <>
-          <p className="text-[12.5px] text-muted-foreground leading-relaxed mb-6">
-            Discuss <span className="text-foreground/85">{opp.name}</span> with your dedicated
-            advisor — including pricing, payment plans and allocation timing.
-          </p>
-
-          <div className="rounded-sm border border-border px-4 py-4 mb-5">
-            <p className="label-eyebrow mb-2">Your Advisor</p>
-            <p className="font-serif text-lg leading-tight">{investor.advisor}</p>
-            <p className="text-[12px] text-muted-foreground mt-0.5">
-              {investor.advisorTitle}
-            </p>
-          </div>
-
-          <div className="space-y-2.5">
-            <ContactAction
-              icon={CalendarDays}
-              label="Schedule a call"
-              sub="Book a 20-min consultation"
-              onClick={() => handleChannel("schedule")}
-            />
-            <ContactAction
-              icon={Phone}
-              label="Request a callback"
-              sub="Today, between 9am – 6pm GMT"
-              onClick={() => handleChannel("callback")}
-            />
-            <ContactAction
-              icon={Mail}
-              label={`Email ${investor.advisor.split(" ")[0]}`}
-              sub={email}
-              onClick={() => handleChannel("email")}
-            />
-          </div>
-
-          <button
-            onClick={onClose}
-            className="tap w-full py-3 mt-6 text-[12px] tracking-[0.12em] uppercase text-muted-foreground active:text-foreground transition-colors"
-          >
-            Close
-          </button>
-        </>
-      ) : (
-        <SuccessState
-          headline={success.headline}
-          body={success.body}
-          onClose={onClose}
-        />
-      )}
-    </ModalShell>
-  );
-}
-
-function ContactAction({
-  icon: Icon,
-  label,
-  sub,
-  onClick,
-}: {
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
-  label: string;
-  sub: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="tap press w-full flex items-center gap-3.5 px-4 py-3.5 rounded-sm border border-border active:bg-card/60 transition-colors text-left"
-    >
-      <div className="w-9 h-9 rounded-full border border-border flex items-center justify-center shrink-0">
-        <Icon className="w-3.5 h-3.5 text-primary" strokeWidth={1.5} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[13px] font-medium leading-snug">{label}</p>
-        <p className="text-[11px] text-muted-foreground mt-0.5">{sub}</p>
-      </div>
-    </button>
   );
 }
