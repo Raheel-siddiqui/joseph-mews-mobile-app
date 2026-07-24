@@ -16,7 +16,6 @@ import {
   timeRangeLabels,
   type TimeRange,
 } from "@/lib/data";
-import { openAdvisorMail } from "@/lib/advisor";
 import { intelligence, getRegionInsight } from "@/lib/intelligence";
 import { getPortfolioInsights, type Insight } from "@/lib/insights";
 import {
@@ -31,10 +30,12 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { TimeRangeTabs } from "@/components/TimeRangeTabs";
 import { TrendLine } from "@/components/TrendLine";
+import { ContactAdvisorSheet } from "@/components/ContactAdvisorSheet";
 
 export default function Dashboard() {
   const [greeting, setGreeting] = useState("Good evening");
   const [range, setRange] = useState<TimeRange>("1Y");
+  const [contactOpen, setContactOpen] = useState(false);
   useEffect(() => {
     const h = new Date().getHours();
     if (h < 12) setGreeting("Good morning");
@@ -283,12 +284,7 @@ export default function Dashboard() {
             {investor.advisorTitle}
           </p>
           <button
-            onClick={() => {
-              openAdvisorMail({
-                subject: `Schedule a call — ${investor.firstName}`,
-                body: `Hello ${investor.advisor},\n\nI would like to schedule a call to discuss my portfolio.\n\nKind regards,\n${investor.firstName}`,
-              });
-            }}
+            onClick={() => setContactOpen(true)}
             className="tap text-xs tracking-widest uppercase text-primary active:opacity-70 transition-opacity flex items-center gap-1 min-h-[2.75rem] -mb-3"
           >
             Schedule a call
@@ -296,6 +292,10 @@ export default function Dashboard() {
           </button>
         </div>
       </div>
+
+      {contactOpen && (
+        <ContactAdvisorSheet onClose={() => setContactOpen(false)} />
+      )}
     </AppShell>
   );
 }

@@ -1,7 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Redirect, Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Login from "./pages/Login";
@@ -20,21 +20,38 @@ import EmptyPortfolio from "./pages/preview/EmptyPortfolio";
 import EmptyDocuments from "./pages/preview/EmptyDocuments";
 import EmptyExplore from "./pages/preview/EmptyExplore";
 import EmptyCalculator from "./pages/preview/EmptyCalculator";
-import { useEffect } from "react";
+import { homePathForPersona, isInvestor } from "./lib/session";
+import { ComponentType, useEffect } from "react";
 import { toast } from "sonner";
+
+/** Investor-only routes redirect prospects to their discovery home. */
+function InvestorOnly({ component: Page }: { component: ComponentType }) {
+  if (!isInvestor()) {
+    return <Redirect to={homePathForPersona("prospect")} />;
+  }
+  return <Page />;
+}
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Login} />
-      <Route path="/dashboard" component={Dashboard} />
-      <Route path="/portfolio" component={Portfolio} />
-      <Route path="/property/:id" component={PropertyDetail} />
+      <Route path="/dashboard">
+        {() => <InvestorOnly component={Dashboard} />}
+      </Route>
+      <Route path="/portfolio">
+        {() => <InvestorOnly component={Portfolio} />}
+      </Route>
+      <Route path="/property/:id">
+        {() => <InvestorOnly component={PropertyDetail} />}
+      </Route>
+      <Route path="/documents">
+        {() => <InvestorOnly component={Documents} />}
+      </Route>
       <Route path="/explore" component={Explore} />
       <Route path="/explore/:id" component={ProjectDetail} />
       <Route path="/calculator/:source/:id" component={Calculator} />
       <Route path="/calculator" component={CalculatorHome} />
-      <Route path="/documents" component={Documents} />
       <Route path="/preview/dashboard-partial" component={PartialDashboard} />
       <Route path="/preview/dashboard" component={EmptyDashboard} />
       <Route path="/preview/portfolio" component={EmptyPortfolio} />

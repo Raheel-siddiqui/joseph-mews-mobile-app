@@ -3,12 +3,17 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { LOGO_URL, HERO_TEXTURE } from "@/lib/data";
+import {
+  homePathForPersona,
+  INVESTOR_EMAIL,
+  setSession,
+} from "@/lib/session";
 import { ArrowRight } from "lucide-react";
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const [step, setStep] = useState<"email" | "otp">("email");
-  const [email, setEmail] = useState("alexander.whitfield@example.com");
+  const [email, setEmail] = useState(INVESTOR_EMAIL);
   const [otp, setOtp] = useState("");
 
   const handleEmailSubmit = (e: React.FormEvent) => {
@@ -18,7 +23,8 @@ export default function Login() {
 
   const handleOtpSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setLocation("/dashboard");
+    const persona = setSession(email);
+    setLocation(homePathForPersona(persona));
   };
 
   return (

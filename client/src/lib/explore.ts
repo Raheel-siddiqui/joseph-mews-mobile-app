@@ -2,6 +2,9 @@
 // Curated developments available to investors. Mirrors the editorial tone
 // of the rest of the app — a few high-quality opportunities, not a listings site.
 
+import type { IllustrativeMortgagePlan } from "@/lib/paymentPlan";
+import { summarizeIllustrativeMortgage } from "@/lib/paymentPlan";
+
 export type OpportunityStatus = "Available" | "Coming Soon" | "Sold Out";
 export type UnitType = "Studio" | "1-bed" | "2-bed" | "3-bed" | "Townhouse";
 
@@ -34,11 +37,50 @@ export interface Opportunity {
   leaseYears?: number;
   totalUnits: number;
   unitsAvailable: number;
-  paymentPlan: string;     // brief
+  /** Short one-line summary (list / eyebrow use). */
+  mortgagePlanSummary: string;
+  /** Illustrative mortgage structure (null if closed). */
+  illustrativeMortgage: IllustrativeMortgagePlan | null;
   highlights: string[];    // 3 bullet-style points
   // 5-year projection points (used by the projection CTA preview)
   projection: { year: number; value: number }[];
 }
+
+const MORTGAGE_IO_60: IllustrativeMortgagePlan = {
+  name: "Illustrative mortgage",
+  depositPercent: 40,
+  ltvPercent: 60,
+  rate: 5.25,
+  type: "Interest-only",
+  termYears: 25,
+};
+
+const MORTGAGE_REPAY_75: IllustrativeMortgagePlan = {
+  name: "Illustrative mortgage",
+  depositPercent: 25,
+  ltvPercent: 75,
+  rate: 5.45,
+  type: "Repayment",
+  termYears: 25,
+};
+
+const MORTGAGE_IO_70: IllustrativeMortgagePlan = {
+  name: "Illustrative mortgage",
+  depositPercent: 30,
+  ltvPercent: 70,
+  rate: 5.35,
+  type: "Interest-only",
+  termYears: 25,
+};
+
+const MORTGAGE_PRIME_IO: IllustrativeMortgagePlan = {
+  name: "Illustrative mortgage",
+  depositPercent: 40,
+  ltvPercent: 60,
+  rate: 4.95,
+  type: "Interest-only",
+  termYears: 25,
+};
 
 // Curated list — keep small (5–6) so it reads as a marketplace, not Rightmove.
 export const opportunities: Opportunity[] = [
@@ -67,7 +109,8 @@ export const opportunities: Opportunity[] = [
     leaseYears: 250,
     totalUnits: 70,
     unitsAvailable: 27,
-    paymentPlan: "20% deposit · staged on completion",
+    illustrativeMortgage: MORTGAGE_IO_60,
+    mortgagePlanSummary: summarizeIllustrativeMortgage(MORTGAGE_IO_60),
     highlights: [
       "Waterfront views, Castlefield conservation area",
       "5-min walk to Deansgate-Castlefield interchange",
@@ -108,7 +151,8 @@ export const opportunities: Opportunity[] = [
     leaseYears: 250,
     totalUnits: 78,
     unitsAvailable: 32,
-    paymentPlan: "10% reservation · 20% on exchange · balance on completion",
+    illustrativeMortgage: MORTGAGE_REPAY_75,
+    mortgagePlanSummary: summarizeIllustrativeMortgage(MORTGAGE_REPAY_75),
     highlights: [
       "Strongest yield profile in the current pipeline",
       "Adjacent to HS2 Curzon Street terminus (2030)",
@@ -148,7 +192,8 @@ export const opportunities: Opportunity[] = [
     leaseYears: 999,
     totalUnits: 54,
     unitsAvailable: 0,
-    paymentPlan: "Reservation list opens June 2026",
+    illustrativeMortgage: MORTGAGE_IO_70,
+    mortgagePlanSummary: "Reservation list opens June 2026",
     highlights: [
       "Phase I sold out within six weeks at launch",
       "Direct waterfront frontage, Princes Dock",
@@ -189,7 +234,8 @@ export const opportunities: Opportunity[] = [
     leaseYears: 999,
     totalUnits: 18,
     unitsAvailable: 11,
-    paymentPlan: "Bespoke staged plan with reservation",
+    illustrativeMortgage: MORTGAGE_PRIME_IO,
+    mortgagePlanSummary: summarizeIllustrativeMortgage(MORTGAGE_PRIME_IO),
     highlights: [
       "Conservation-grade restoration of Georgian terrace",
       "Concierge, residents' lounge, private gardens",
@@ -229,7 +275,8 @@ export const opportunities: Opportunity[] = [
     leaseYears: 250,
     totalUnits: 84,
     unitsAvailable: 0,
-    paymentPlan: "Closed",
+    illustrativeMortgage: null,
+    mortgagePlanSummary: "Closed",
     highlights: [
       "Final phase fully reserved within ten weeks",
       "Anchor scheme of Leeds South Bank regeneration",

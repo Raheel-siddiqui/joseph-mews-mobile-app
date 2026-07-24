@@ -1,6 +1,8 @@
 // Joseph Mews Investor Platform — Sample Data
 // All figures are realistic and consistent across screens.
 
+import type { MortgagePlan } from "@/lib/paymentPlan";
+
 export type PropertyStatus = "Tenanted" | "In Build" | "Vacant" | "Refurbishment";
 
 export interface Property {
@@ -36,6 +38,8 @@ export interface Property {
   occupancy: number;
   valueHistory: { month: string; value: number; monthsAgo: number }[];
   rentHistory: { month: string; rent: number }[];
+  /** Lender mortgage schedule — present when the holding is mortgaged. */
+  mortgagePlan?: MortgagePlan;
 }
 
 export const investor = {
@@ -100,6 +104,63 @@ export const properties: Property[] = [
       { month: "Oct", rent: 6850 },
       { month: "Nov", rent: 6850 },
     ],
+    mortgagePlan: {
+      lender: "Coutts Private Bank",
+      type: "Interest-only",
+      rate: 4.75,
+      termYears: 25,
+      remainingTermMonths: 251,
+      monthlyPayment: 3420,
+      outstandingBalance: 870000,
+      originalLoan: 870000,
+      nextDueDate: "1 Aug 2026",
+      schedule: [
+        {
+          id: "may-m1",
+          label: "June 2026",
+          amount: 3420,
+          dueDate: "1 Jun 2026",
+          paidAt: "1 Jun 2026",
+          status: "paid",
+        },
+        {
+          id: "may-m2",
+          label: "July 2026",
+          amount: 3420,
+          dueDate: "1 Jul 2026",
+          paidAt: "1 Jul 2026",
+          status: "paid",
+        },
+        {
+          id: "may-m3",
+          label: "August 2026",
+          amount: 3420,
+          dueDate: "1 Aug 2026",
+          status: "due",
+        },
+        {
+          id: "may-m4",
+          label: "September 2026",
+          amount: 3420,
+          dueDate: "1 Sep 2026",
+          status: "upcoming",
+        },
+        {
+          id: "may-m5",
+          label: "October 2026",
+          amount: 3420,
+          dueDate: "1 Oct 2026",
+          status: "upcoming",
+        },
+        {
+          id: "may-m6",
+          label: "November 2026",
+          amount: 3420,
+          dueDate: "1 Nov 2026",
+          status: "upcoming",
+        },
+      ],
+    },
   },
   {
     id: "JM-002",
@@ -152,6 +213,63 @@ export const properties: Property[] = [
       { month: "Oct", rent: 1950 },
       { month: "Nov", rent: 1950 },
     ],
+    mortgagePlan: {
+      lender: "HSBC UK",
+      type: "Repayment",
+      rate: 5.15,
+      termYears: 25,
+      remainingTermMonths: 248,
+      monthlyPayment: 1180,
+      outstandingBalance: 231000,
+      originalLoan: 245000,
+      nextDueDate: "5 Aug 2026",
+      schedule: [
+        {
+          id: "mcr-m1",
+          label: "June 2026",
+          amount: 1180,
+          dueDate: "5 Jun 2026",
+          paidAt: "5 Jun 2026",
+          status: "paid",
+        },
+        {
+          id: "mcr-m2",
+          label: "July 2026",
+          amount: 1180,
+          dueDate: "5 Jul 2026",
+          paidAt: "5 Jul 2026",
+          status: "paid",
+        },
+        {
+          id: "mcr-m3",
+          label: "August 2026",
+          amount: 1180,
+          dueDate: "5 Aug 2026",
+          status: "due",
+        },
+        {
+          id: "mcr-m4",
+          label: "September 2026",
+          amount: 1180,
+          dueDate: "5 Sep 2026",
+          status: "upcoming",
+        },
+        {
+          id: "mcr-m5",
+          label: "October 2026",
+          amount: 1180,
+          dueDate: "5 Oct 2026",
+          status: "upcoming",
+        },
+        {
+          id: "mcr-m6",
+          label: "November 2026",
+          amount: 1180,
+          dueDate: "5 Nov 2026",
+          status: "upcoming",
+        },
+      ],
+    },
   },
   {
     id: "JM-003",
@@ -242,6 +360,63 @@ export const properties: Property[] = [
       { month: "Oct", rent: 1485 },
       { month: "Nov", rent: 1485 },
     ],
+    mortgagePlan: {
+      lender: "Barclays",
+      type: "Repayment",
+      rate: 5.35,
+      termYears: 25,
+      remainingTermMonths: 262,
+      monthlyPayment: 920,
+      outstandingBalance: 177000,
+      originalLoan: 188000,
+      nextDueDate: "12 Aug 2026",
+      schedule: [
+        {
+          id: "liv-m1",
+          label: "June 2026",
+          amount: 920,
+          dueDate: "12 Jun 2026",
+          paidAt: "12 Jun 2026",
+          status: "paid",
+        },
+        {
+          id: "liv-m2",
+          label: "July 2026",
+          amount: 920,
+          dueDate: "12 Jul 2026",
+          paidAt: "12 Jul 2026",
+          status: "paid",
+        },
+        {
+          id: "liv-m3",
+          label: "August 2026",
+          amount: 920,
+          dueDate: "12 Aug 2026",
+          status: "due",
+        },
+        {
+          id: "liv-m4",
+          label: "September 2026",
+          amount: 920,
+          dueDate: "12 Sep 2026",
+          status: "upcoming",
+        },
+        {
+          id: "liv-m5",
+          label: "October 2026",
+          amount: 920,
+          dueDate: "12 Oct 2026",
+          status: "upcoming",
+        },
+        {
+          id: "liv-m6",
+          label: "November 2026",
+          amount: 920,
+          dueDate: "12 Nov 2026",
+          status: "upcoming",
+        },
+      ],
+    },
   },
 ];
 
@@ -401,7 +576,7 @@ export const activities: Activity[] = [
 export interface Document {
   id: string;
   name: string;
-  category: "Contracts" | "Rental" | "Tax" | "Mortgage" | "Legal";
+  category: "Contracts" | "Rental" | "Tax" | "Mortgage" | "Legal" | "Others";
   property?: string;
   fileType: "PDF" | "DOC";
   size: string;

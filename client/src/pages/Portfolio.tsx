@@ -1,13 +1,21 @@
 // Joseph Mews — Portfolio List
 // Design: One property per row, large image, editorial typography
 import { Link } from "wouter";
+import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { properties, portfolio, fmt, investor } from "@/lib/data";
-import { openAdvisorMail } from "@/lib/advisor";
+import { properties, portfolio, fmt } from "@/lib/data";
+import {
+  nextMortgagePayment,
+  progressPct,
+  remainingLabel,
+} from "@/lib/paymentPlan";
 import { yieldSignal, yieldDeltaLabel } from "@/lib/intelligence";
 import { ArrowUpRight, ArrowRight, ArrowDownRight, Minus } from "lucide-react";
+import { ContactAdvisorSheet } from "@/components/ContactAdvisorSheet";
 
 export default function Portfolio() {
+  const [contactOpen, setContactOpen] = useState(false);
+
   return (
     <AppShell>
       <div className="page-px">
@@ -27,6 +35,9 @@ export default function Portfolio() {
           {properties.map((p, i) => {
             const signal = yieldSignal(p);
             const deltaLabel = yieldDeltaLabel(p);
+            const plan = p.mortgagePlan;
+            const nextDue = plan ? nextMortgagePayment(plan) : undefined;
+            const progress = plan ? progressPct(plan) : 0;
             return (
             <Link
               key={p.id}
@@ -107,6 +118,56 @@ export default function Portfolio() {
                     value={p.grossYield > 0 ? fmt.pctPlain(p.grossYield) : "—"}
                   />
                 </div>
+
+                {plan && nextDue && (
+                  <div className="mt-4 rounded-sm border border-primary/30 bg-card/40 px-4 py-3.5">
+                    <div className="flex items-baseline justify-between gap-3 mb-3">
+                      <p className="label-eyebrow text-primary">Mortgage</p>
+                      <p className="text-[10px] tracking-[0.12em] uppercase text-muted-foreground tabular-nums">
+                        {plan.type === "Repayment"
+                          ? `${progress.toFixed(0)}% repaid`
+                          : remainingLabel(plan)}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 mb-3.5">
+                      <div>
+                        <p className="text-[10px] tracking-[0.12em] uppercase text-muted-foreground mb-1">
+                          Monthly
+                        </p>
+                        <p className="font-serif text-[15px] tabular-nums leading-none">
+                          {fmt.currency(plan.monthlyPayment)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] tracking-[0.12em] uppercase text-muted-foreground mb-1">
+                          Outstanding
+                        </p>
+                        <p className="font-serif text-[15px] tabular-nums leading-none">
+                          {fmt.currency(plan.outstandingBalance)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="h-[2px] bg-border relative overflow-hidden rounded-full mb-3.5">
+                      <div
+                        className="absolute inset-y-0 left-0 bg-primary rounded-full"
+                        style={{ width: `${Math.min(100, progress)}%` }}
+                      />
+                    </div>
+                    <p className="text-[11px] text-foreground/85 leading-snug">
+                      <span className="text-muted-foreground">Next · </span>
+                      {nextDue.label}
+                    </p>
+                    <p className="text-[12px] tabular-nums mt-0.5">
+                      <span className="text-primary font-medium">
+                        {fmt.currency(nextDue.amount)}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {" "}
+                        · due {nextDue.dueDate}
+                      </span>
+                    </p>
+                  </div>
+                )}
               </div>
             </Link>
             );
@@ -118,12 +179,7 @@ export default function Portfolio() {
         <div className="text-center pb-4">
           <p className="label-eyebrow mb-3">Considering an additional investment?</p>
           <button
-            onClick={() => {
-              openAdvisorMail({
-                subject: `Additional investment — ${investor.firstName}`,
-                body: `Hello ${investor.advisor},\n\nI am considering an additional investment and would like to discuss options.\n\nKind regards,\n${investor.firstName}`,
-              });
-            }}
+            onClick={() => setContactOpen(true)}
             className="tap text-sm text-primary active:opacity-70 transition-opacity inline-flex items-center gap-1.5 min-h-[2.75rem] px-4"
           >
             Speak with your advisor
@@ -131,6 +187,10 @@ export default function Portfolio() {
           </button>
         </div>
       </div>
+
+      {contactOpen && (
+        <ContactAdvisorSheet onClose={() => setContactOpen(false)} />
+      )}
     </AppShell>
   );
 }

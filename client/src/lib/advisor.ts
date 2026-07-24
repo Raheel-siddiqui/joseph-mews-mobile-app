@@ -1,8 +1,9 @@
 // Joseph Mews — advisor contact helpers (shared across journeys)
-import { investor } from "@/lib/data";
+import { getActiveUser } from "@/lib/session";
 
 export function advisorEmail(): string {
-  const domain = investor.email.split("@")[1] || "example.com";
+  const user = getActiveUser();
+  const domain = user.email.split("@")[1] || "example.com";
   return `advisor@${domain}`;
 }
 
@@ -11,12 +12,13 @@ export function openAdvisorMail(opts?: {
   subject?: string;
   body?: string;
 }) {
+  const user = getActiveUser();
   const subject = encodeURIComponent(
     opts?.subject ?? `Enquiry — Joseph Mews`
   );
   const body = encodeURIComponent(
     opts?.body ??
-      `Hello ${investor.advisor},\n\nI would like to discuss my portfolio.\n\nKind regards,\n${investor.firstName}`
+      `Hello ${user.advisor},\n\nI would like to discuss my portfolio.\n\nKind regards,\n${user.firstName}`
   );
   window.location.href = `mailto:${advisorEmail()}?subject=${subject}&body=${body}`;
 }

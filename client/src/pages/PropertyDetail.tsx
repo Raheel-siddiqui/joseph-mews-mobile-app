@@ -11,6 +11,13 @@ import {
   type TimeRange,
 } from "@/lib/data";
 import {
+  progressPct,
+  nextMortgagePayment,
+  remainingLabel,
+  type MortgageInstallment,
+  type MortgageInstallmentStatus,
+} from "@/lib/paymentPlan";
+import {
   Bed,
   Bath,
   Maximize2,
@@ -30,11 +37,16 @@ export default function PropertyDetail() {
   const property = params?.id ? getProperty(params.id) : null;
 
   const [chartRange, setChartRange] = useState<TimeRange>("1Y");
+  const [scheduleFilter, setScheduleFilter] =
+    useState<ScheduleFilter>("all");
 
   if (!property) return <NotFound />;
 
   const equityPct = (property.equity / property.currentValue) * 100;
   const isInBuild = property.status === "In Build";
+  const plan = property.mortgagePlan;
+  const planProgress = plan ? progressPct(plan) : 0;
+  const planNext = plan ? nextMortgagePayment(plan) : undefined;
 
   // Filter property's value history by selected range,
   // ensure at least 2 points so chart still renders for short ranges.
@@ -55,9 +67,11 @@ export default function PropertyDetail() {
 
   /* ----- Section tab navigation ----- */
   const sectionIds = useMemo(() => {
-    const base = ["overview", "performance", "income", "projection"];
+    const base = ["overview"];
+    if (property.mortgagePlan) base.push("payments");
+    base.push("performance", "income", "projection");
     return property.tenantName ? [...base, "tenancy"] : base;
-  }, [property.tenantName]);
+  }, [property.tenantName, property.mortgagePlan]);
   const [activeSection, setActiveSection] = useState<string>("overview");
   const tabsRef = useRef<HTMLDivElement | null>(null);
 
@@ -105,6 +119,7 @@ export default function PropertyDetail() {
 
   const tabLabels: Record<string, string> = {
     overview: "Overview",
+    payments: "Mortgage",
     performance: "Performance",
     income: "Income",
     projection: "Projection",
@@ -228,6 +243,104 @@ export default function PropertyDetail() {
             />
           </div>
         </Section>
+
+        {plan && (
+          <>
+            <Divider />
+
+            <div id="section-payments" />
+            <Section title="Mortgage Plan">
+              <p className="text-[12px] text-muted-foreground mb-6">
+                {plan.lender} · {plan.type} · {plan.rate.toFixed(2)}%
+              </p>
+
+              <div className="grid grid-cols-2 gap-x-3 gap-y-5 mb-5">
+                <DataPoint
+                  label="Monthly"
+                  value={fmt.currency(plan.monthlyPayment)}
+                />
+                <DataPoint
+                  label="Outstanding"
+                  value={fmt.currency(plan.outstandingBalance)}
+                />
+                <DataPoint
+                  label="Term"
+                  value={`${plan.termYears} years`}
+                  sub={remainingLabel(plan)}
+                />
+                <DataPoint
+                  label="Original loan"
+                  value={fmt.currency(plan.originalLoan)}
+                />
+              </div>
+
+              <div className="mb-7">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="label-eyebrow">
+                    {plan.type === "Repayment"
+                      ? "Principal repaid"
+                      : "Term elapsed"}
+                  </p>
+                  <p className="text-[11px] tabular-nums text-muted-foreground">
+                    {planProgress.toFixed(0)}%
+                  </p>
+                </div>
+                <div className="h-[2px] bg-border relative overflow-hidden rounded-full">
+                  <div
+                    className="absolute inset-y-0 left-0 bg-primary rounded-full"
+                    style={{ width: `${Math.min(100, planProgress)}%` }}
+                  />
+                </div>
+              </div>
+
+              {planNext && (
+                <div className="bg-card/50 px-5 py-5 rounded-sm border border-primary/35 mb-7">
+                  <p className="label-eyebrow mb-2 text-primary">Next payment</p>
+                  <p className="font-serif text-2xl tabular-nums leading-none mb-2">
+                    {fmt.currency(planNext.amount)}
+                  </p>
+                  <p className="text-[13px] text-foreground/85">
+                    {planNext.label}
+                  </p>
+                  <p className="text-[12px] text-muted-foreground mt-1 tabular-nums">
+                    Due {planNext.dueDate}
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-0">
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <p className="label-eyebrow shrink-0">Schedule</p>
+                  <ScheduleFilterTabs
+                    value={scheduleFilter}
+                    onChange={setScheduleFilter}
+                  />
+                </div>
+                {(() => {
+                  const rows =
+                    scheduleFilter === "all"
+                      ? plan.schedule
+                      : plan.schedule.filter(
+                          (i) => i.status === scheduleFilter
+                        );
+                  if (rows.length === 0) {
+                    return (
+                      <p className="text-sm text-muted-foreground py-2">
+                        No {scheduleFilter} payments in this schedule
+                      </p>
+                    );
+                  }
+                  return rows.map((inst, i) => (
+                    <div key={inst.id}>
+                      {i > 0 && <div className="hairline my-4" />}
+                      <MortgageInstallmentRow installment={inst} />
+                    </div>
+                  ));
+                })()}
+              </div>
+            </Section>
+          </>
+        )}
 
         <Divider />
 
@@ -474,6 +587,85 @@ function CostRow({ label, value }: { label: string; value: string }) {
     <div className="flex items-center justify-between">
       <p className="text-sm text-muted-foreground">{label}</p>
       <p className="text-sm tabular-nums">{value}</p>
+    </div>
+  );
+}
+
+type ScheduleFilter = "all" | MortgageInstallmentStatus;
+
+const SCHEDULE_FILTERS: { value: ScheduleFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "paid", label: "Paid" },
+  { value: "due", label: "Due" },
+  { value: "upcoming", label: "Upcoming" },
+];
+
+function ScheduleFilterTabs({
+  value,
+  onChange,
+}: {
+  value: ScheduleFilter;
+  onChange: (v: ScheduleFilter) => void;
+}) {
+  return (
+    <div className="inline-flex items-center gap-0.5 border border-border rounded-sm p-0.5 bg-card/40 max-w-full overflow-x-auto scrollbar-hide">
+      {SCHEDULE_FILTERS.map((r) => {
+        const active = r.value === value;
+        return (
+          <button
+            key={r.value}
+            type="button"
+            onClick={() => onChange(r.value)}
+            className={`px-2.5 py-2 text-[10px] tracking-[0.14em] uppercase rounded-[2px] transition-all tap shrink-0 ${
+              active
+                ? "bg-primary/15 text-primary"
+                : "text-muted-foreground active:text-foreground"
+            }`}
+          >
+            {r.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function MortgageInstallmentRow({
+  installment,
+}: {
+  installment: MortgageInstallment;
+}) {
+  const statusLabel =
+    installment.status === "paid"
+      ? "Paid"
+      : installment.status === "due"
+      ? "Due"
+      : "Upcoming";
+  const statusTone =
+    installment.status === "paid" || installment.status === "due"
+      ? "text-primary"
+      : "text-muted-foreground";
+
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div className="min-w-0">
+        <p className="text-sm font-medium mb-0.5">{installment.label}</p>
+        <p className="text-[11px] text-muted-foreground tabular-nums">
+          {installment.status === "paid" && installment.paidAt
+            ? `Paid ${installment.paidAt}`
+            : installment.dueDate}
+        </p>
+      </div>
+      <div className="text-right shrink-0">
+        <p className="font-serif text-base tabular-nums leading-none mb-1">
+          {fmt.currency(installment.amount)}
+        </p>
+        <p
+          className={`text-[10px] tracking-[0.14em] uppercase ${statusTone}`}
+        >
+          {statusLabel}
+        </p>
+      </div>
     </div>
   );
 }

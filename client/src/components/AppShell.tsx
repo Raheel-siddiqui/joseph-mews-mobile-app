@@ -10,7 +10,13 @@ import {
   Calculator as CalculatorIcon,
   Mail,
 } from "lucide-react";
-import { investor, LOGO_URL } from "@/lib/data";
+import { LOGO_URL } from "@/lib/data";
+import {
+  getActiveUser,
+  homePathForPersona,
+  isInvestor,
+  userInitials,
+} from "@/lib/session";
 import { advisorEmail, openAdvisorMail } from "@/lib/advisor";
 import { ModalShell } from "@/components/ModalShell";
 import { ReactNode, useState } from "react";
@@ -32,6 +38,9 @@ export function AppShell({
 }: AppShellProps) {
   const [location] = useLocation();
   const [profileOpen, setProfileOpen] = useState(false);
+  const investorMode = isInvestor();
+  const homePath = homePathForPersona();
+  const user = getActiveUser();
 
   return (
     <div className="min-h-screen bg-background grain">
@@ -48,7 +57,7 @@ export function AppShell({
                   <span className="text-sm">Back</span>
                 </Link>
               ) : (
-                <Link href="/dashboard" className="tap flex items-center gap-2.5 -ml-1 h-11 px-1">
+                <Link href={homePath} className="tap flex items-center gap-2.5 -ml-1 h-11 px-1">
                   <img
                     src={LOGO_URL}
                     alt="Joseph Mews"
@@ -67,7 +76,7 @@ export function AppShell({
                   aria-label="Profile"
                 >
                   <span className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-xs font-medium text-foreground/80">
-                    AW
+                    {userInitials(user)}
                   </span>
                 </button>
               )}
@@ -83,38 +92,58 @@ export function AppShell({
             <div className="hairline" />
             <div className="bg-background/95 backdrop-blur-md">
               <div className="flex items-stretch px-2 pt-2">
-                <NavItem
-                  href="/dashboard"
-                  label="Overview"
-                  icon={LayoutGrid}
-                  active={location === "/dashboard" || location === "/"}
-                />
-                <NavItem
-                  href="/portfolio"
-                  label="Portfolio"
-                  icon={Building2}
-                  active={
-                    location === "/portfolio" || location.startsWith("/property")
-                  }
-                />
-                <NavItem
-                  href="/explore"
-                  label="Explore"
-                  icon={Compass}
-                  active={location.startsWith("/explore")}
-                />
-                <NavItem
-                  href="/calculator"
-                  label="Calc"
-                  icon={CalculatorIcon}
-                  active={location.startsWith("/calculator")}
-                />
-                <NavItem
-                  href="/documents"
-                  label="Docs"
-                  icon={FileText}
-                  active={location === "/documents"}
-                />
+                {investorMode ? (
+                  <>
+                    <NavItem
+                      href="/dashboard"
+                      label="Overview"
+                      icon={LayoutGrid}
+                      active={location === "/dashboard" || location === "/"}
+                    />
+                    <NavItem
+                      href="/portfolio"
+                      label="Portfolio"
+                      icon={Building2}
+                      active={
+                        location === "/portfolio" ||
+                        location.startsWith("/property")
+                      }
+                    />
+                    <NavItem
+                      href="/explore"
+                      label="Explore"
+                      icon={Compass}
+                      active={location.startsWith("/explore")}
+                    />
+                    <NavItem
+                      href="/calculator"
+                      label="Calc"
+                      icon={CalculatorIcon}
+                      active={location.startsWith("/calculator")}
+                    />
+                    <NavItem
+                      href="/documents"
+                      label="Docs"
+                      icon={FileText}
+                      active={location === "/documents"}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <NavItem
+                      href="/explore"
+                      label="Explore"
+                      icon={Compass}
+                      active={location.startsWith("/explore")}
+                    />
+                    <NavItem
+                      href="/calculator"
+                      label="Calc"
+                      icon={CalculatorIcon}
+                      active={location.startsWith("/calculator")}
+                    />
+                  </>
+                )}
               </div>
               <div className="pb-safe">
                 <div className="h-2" />
@@ -132,28 +161,32 @@ export function AppShell({
 }
 
 function ProfileSheet({ onClose }: { onClose: () => void }) {
+  const user = getActiveUser();
+  const investorMode = isInvestor();
+
   return (
     <ModalShell onClose={onClose} title="Your profile">
       <p className="text-[12.5px] text-muted-foreground leading-relaxed mb-6">
-        Profile details are managed by your advisor. Contact them to request
-        an update.
+        {investorMode
+          ? "Profile details are managed by your advisor. Contact them to request an update."
+          : "You’re browsing as a guest. Speak with your advisor when you’re ready to invest."}
       </p>
 
       <div className="rounded-sm border border-border px-4 py-4 mb-4 space-y-4">
-        <ProfileRow label="Name" value={investor.name} />
+        <ProfileRow label="Name" value={user.name} />
         <div className="hairline" />
-        <ProfileRow label="Email" value={investor.email} />
+        <ProfileRow label="Email" value={user.email} />
         <div className="hairline" />
-        <ProfileRow label="Member since" value={investor.memberSince} />
+        <ProfileRow label="Member since" value={user.memberSince} />
         <div className="hairline" />
-        <ProfileRow label="Tier" value={investor.tier} />
+        <ProfileRow label="Tier" value={user.tier} />
       </div>
 
       <div className="rounded-sm border border-border px-4 py-4 mb-6">
         <p className="label-eyebrow mb-2">Your Advisor</p>
-        <p className="font-serif text-lg leading-tight">{investor.advisor}</p>
+        <p className="font-serif text-lg leading-tight">{user.advisor}</p>
         <p className="text-[12px] text-muted-foreground mt-0.5">
-          {investor.advisorTitle}
+          {user.advisorTitle}
         </p>
         <p className="text-[12px] text-muted-foreground mt-2">{advisorEmail()}</p>
       </div>
@@ -161,8 +194,8 @@ function ProfileSheet({ onClose }: { onClose: () => void }) {
       <button
         onClick={() =>
           openAdvisorMail({
-            subject: `Profile enquiry — ${investor.name}`,
-            body: `Hello ${investor.advisor},\n\nI would like to discuss my profile details.\n\nKind regards,\n${investor.firstName}`,
+            subject: `Profile enquiry — ${user.name}`,
+            body: `Hello ${user.advisor},\n\nI would like to discuss my profile details.\n\nKind regards,\n${user.firstName}`,
           })
         }
         className="tap press w-full flex items-center justify-center gap-2 py-3.5 rounded-sm bg-primary text-primary-foreground font-medium tracking-[0.08em] text-[12.5px] uppercase active:opacity-90 transition-opacity"

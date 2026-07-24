@@ -179,6 +179,7 @@ Used on Property Detail, Explore detail, and Calculator. Source: `lib/projection
 | `city` | String | Regional insights |
 | `valueHistory[]` | `{ month, value }` | Charts, range returns |
 | `rentHistory[]` | `{ month, rent }` | Rent charts (optional) |
+| `mortgagePlan` | Lender schedule | Monthly due / outstanding / term progress |
 
 ### Per investor
 
@@ -215,4 +216,31 @@ Used on Property Detail, Explore detail, and Calculator. Source: `lib/projection
 
 ---
 
-*Generated from prototype codebase (`data.ts`, `projection.ts`, `CalculatorHome.tsx`, `Dashboard.tsx`, `PropertyDetail.tsx`, `intelligence.ts`, `insights.ts`).*
+## 9. Mortgage plans (owned holdings & Explore)
+
+### Owned holdings (mortgaged)
+
+| Metric | Formula | Data required |
+|--------|---------|---------------|
+| **Next payment** | First schedule item with `status = due`, else first `upcoming` | `schedule[]`: `status`, `dueDate`, `amount`, `label` |
+| **Principal repaid %** | `((originalLoan − outstandingBalance) / originalLoan) × 100` | `originalLoan`, `outstandingBalance` |
+| **Term elapsed %** | `((termYears×12 − remainingTermMonths) / (termYears×12)) × 100` | `termYears`, `remainingTermMonths` |
+| **Progress %** | Repayment → principal repaid %; Interest-only → term elapsed % | `type` + fields above |
+
+Per schedule item: `label`, `amount`, `dueDate`, optional `paidAt`, `status` (`paid` \| `due` \| `upcoming`).
+
+Plan fields: `lender`, `type`, `rate`, `termYears`, `remainingTermMonths`, `monthlyPayment`, `outstandingBalance`, `originalLoan`, `nextDueDate`, `schedule[]`.
+
+### Explore (marketplace — illustrative)
+
+| Metric | Formula | Data required |
+|--------|---------|---------------|
+| **Illustrative loan** | `fromPrice × (ltvPercent / 100)` | Opportunity `fromPrice`, plan `ltvPercent` |
+| **Illustrative deposit** | `fromPrice × (depositPercent / 100)` | `depositPercent` |
+| **Monthly (interest-only)** | `(loan × rate/100) / 12` | `loan`, `rate` |
+| **Monthly (repayment)** | Amortising payment over `termYears` at monthly rate | `loan`, `rate`, `termYears` |
+| **Personalisation** | Copy only — advisor-curated structure | Not computed |
+
+---
+
+*Generated from prototype codebase (`data.ts`, `projection.ts`, `CalculatorHome.tsx`, `Dashboard.tsx`, `PropertyDetail.tsx`, `intelligence.ts`, `insights.ts`, `paymentPlan.ts`).*

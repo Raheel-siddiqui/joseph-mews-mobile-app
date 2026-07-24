@@ -7,6 +7,12 @@ import { AppShell } from "@/components/AppShell";
 import { ContactAdvisorSheet } from "@/components/ContactAdvisorSheet";
 import { getOpportunity, type OpportunityStatus } from "@/lib/explore";
 import { fmt } from "@/lib/data";
+import {
+  MORTGAGE_PERSONALISATION_NOTE,
+  illustrativeDeposit,
+  illustrativeLoan,
+  illustrativeMonthlyPayment,
+} from "@/lib/paymentPlan";
 import { ProjectionSection } from "@/components/ProjectionSection";
 import {
   ArrowUpRight,
@@ -152,13 +158,72 @@ export default function ProjectDetail() {
               }
             />
           </div>
+        </Section>
 
-          <div className="hairline mt-6 mb-5" />
+        <Divider />
 
-          <p className="label-eyebrow mb-2">Payment Plan</p>
-          <p className="text-sm text-foreground/85 leading-relaxed">
-            {opp.paymentPlan}
-          </p>
+        {/* MORTGAGE PLAN */}
+        <Section title="Mortgage Plan">
+          {opp.illustrativeMortgage ? (
+            <>
+              <p className="label-eyebrow mb-1.5">
+                {opp.illustrativeMortgage.name}
+              </p>
+              <p className="text-[12px] text-muted-foreground mb-6">
+                Illustrative figures based on starting price{" "}
+                {fmt.currency(opp.fromPrice)}
+              </p>
+
+              {(() => {
+                const m = opp.illustrativeMortgage;
+                const loan = illustrativeLoan(opp.fromPrice, m.ltvPercent);
+                const deposit = illustrativeDeposit(
+                  opp.fromPrice,
+                  m.depositPercent
+                );
+                const monthly = illustrativeMonthlyPayment(
+                  loan,
+                  m.rate,
+                  m.type,
+                  m.termYears
+                );
+                return (
+                  <>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-5 mb-7">
+                      <DataPoint
+                        label="Deposit"
+                        value={fmt.currency(deposit)}
+                        sub={`${m.depositPercent}%`}
+                      />
+                      <DataPoint
+                        label="Loan"
+                        value={fmt.currency(loan)}
+                        sub={`${m.ltvPercent}% LTV`}
+                      />
+                      <DataPoint
+                        label="Monthly"
+                        value={fmt.currency(monthly)}
+                        sub={`${m.type} · ${m.termYears} yr`}
+                      />
+                      <DataPoint
+                        label="Rate"
+                        value={`${m.rate.toFixed(2)}%`}
+                        sub="Indicative"
+                      />
+                    </div>
+                  </>
+                );
+              })()}
+
+              <p className="text-[12px] leading-relaxed text-muted-foreground">
+                {MORTGAGE_PERSONALISATION_NOTE}
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {opp.mortgagePlanSummary}
+            </p>
+          )}
         </Section>
 
         <div className="h-6" />

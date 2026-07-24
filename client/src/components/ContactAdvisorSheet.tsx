@@ -2,68 +2,82 @@
 import { useState } from "react";
 import { ModalShell, SuccessState } from "@/components/ModalShell";
 import { advisorEmail } from "@/lib/advisor";
-import { investor } from "@/lib/data";
+import { getActiveUser } from "@/lib/session";
 import type { Opportunity } from "@/lib/explore";
 import { CalendarDays, Mail, Phone } from "lucide-react";
 
 type ContactChannel = "schedule" | "callback" | "email";
 
-const CONTACT_SUCCESS: Record<
-  ContactChannel,
-  { headline: string; body: string }
-> = {
-  schedule: {
-    headline: "Call request received",
-    body: `${investor.advisor} will offer times for a 20-minute consultation within one business day.`,
-  },
-  callback: {
-    headline: "Callback requested",
-    body: `${investor.advisor} will call you today between 9am and 6pm GMT.`,
-  },
-  email: {
-    headline: "Email ready to send",
-    body: `We've prepared a message to ${investor.advisor}. Check your inbox for a copy, or they will reply directly.`,
-  },
-};
-
 export function ContactAdvisorSheet({
   opp,
   onClose,
 }: {
-  opp: Opportunity;
+  opp?: Opportunity;
   onClose: () => void;
 }) {
+  const user = getActiveUser();
   const [submitted, setSubmitted] = useState<ContactChannel | null>(null);
   const email = advisorEmail();
 
+  const contactSuccess: Record<
+    ContactChannel,
+    { headline: string; body: string }
+  > = {
+    schedule: {
+      headline: "Call request received",
+      body: `${user.advisor} will offer times for a 20-minute consultation within one business day.`,
+    },
+    callback: {
+      headline: "Callback requested",
+      body: `${user.advisor} will call you today between 9am and 6pm GMT.`,
+    },
+    email: {
+      headline: "Email ready to send",
+      body: `We've prepared a message to ${user.advisor}. Check your inbox for a copy, or they will reply directly.`,
+    },
+  };
+
   const handleChannel = (channel: ContactChannel) => {
     if (channel === "email") {
-      const subject = encodeURIComponent(`Enquiry — ${opp.name}`);
+      const subject = encodeURIComponent(
+        opp ? `Enquiry — ${opp.name}` : `Schedule a call — ${user.firstName}`,
+      );
       const body = encodeURIComponent(
-        `Hello ${investor.advisor},\n\nI would like to discuss ${opp.name} (${opp.reference}), including pricing, payment plans and allocation timing.\n\nKind regards,\n${investor.firstName}`,
+        opp
+          ? `Hello ${user.advisor},\n\nI would like to discuss ${opp.name} (${opp.reference}), including pricing, mortgage options and allocation timing.\n\nKind regards,\n${user.firstName}`
+          : `Hello ${user.advisor},\n\nI would like to schedule a call to discuss my portfolio.\n\nKind regards,\n${user.firstName}`,
       );
       window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
     }
     setSubmitted(channel);
   };
 
-  const success = submitted ? CONTACT_SUCCESS[submitted] : null;
+  const success = submitted ? contactSuccess[submitted] : null;
 
   return (
     <ModalShell onClose={onClose} title="Speak with your advisor">
       {!submitted || !success ? (
         <>
           <p className="text-[12.5px] text-muted-foreground leading-relaxed mb-6">
-            Discuss <span className="text-foreground/85">{opp.name}</span> with
-            your dedicated advisor — including pricing, payment plans and
-            allocation timing.
+            {opp ? (
+              <>
+                Discuss <span className="text-foreground/85">{opp.name}</span> with
+                your dedicated advisor — including pricing, mortgage options and
+                allocation timing.
+              </>
+            ) : (
+              <>
+                Speak with your dedicated advisor about your portfolio —
+                including performance, next steps and new opportunities.
+              </>
+            )}
           </p>
 
           <div className="rounded-sm border border-border px-4 py-4 mb-5">
             <p className="label-eyebrow mb-2">Your Advisor</p>
-            <p className="font-serif text-lg leading-tight">{investor.advisor}</p>
+            <p className="font-serif text-lg leading-tight">{user.advisor}</p>
             <p className="text-[12px] text-muted-foreground mt-0.5">
-              {investor.advisorTitle}
+              {user.advisorTitle}
             </p>
           </div>
 
@@ -82,7 +96,7 @@ export function ContactAdvisorSheet({
             />
             <ContactAction
               icon={Mail}
-              label={`Email ${investor.advisor.split(" ")[0]}`}
+              label={`Email ${user.advisor.split(" ")[0]}`}
               sub={email}
               onClick={() => handleChannel("email")}
             />
