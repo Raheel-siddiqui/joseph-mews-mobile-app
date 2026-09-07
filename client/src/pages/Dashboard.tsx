@@ -7,17 +7,21 @@
 import { Link } from "wouter";
 import { AppShell } from "@/components/AppShell";
 import {
-  portfolio,
-  properties,
-  investor,
   fmt,
-  portfolioHistory,
   filterByRange,
   timeRangeLabels,
   type TimeRange,
 } from "@/lib/data";
-import { intelligence, getRegionInsight } from "@/lib/intelligence";
+import {
+  getActivePortfolio,
+  getActivePortfolioHistory,
+  getActiveProperties,
+  isSingleHolding,
+  propertyCountLabel,
+} from "@/lib/holdings";
+import { buildIntelligence, getRegionInsight } from "@/lib/intelligence";
 import { getPortfolioInsights, type Insight } from "@/lib/insights";
+import { getActiveUser } from "@/lib/session";
 import {
   ArrowUpRight,
   ArrowRight,
@@ -36,6 +40,16 @@ export default function Dashboard() {
   const [greeting, setGreeting] = useState("Good evening");
   const [range, setRange] = useState<TimeRange>("1Y");
   const [contactOpen, setContactOpen] = useState(false);
+  const user = getActiveUser();
+  const properties = getActiveProperties();
+  const portfolio = getActivePortfolio();
+  const portfolioHistory = getActivePortfolioHistory();
+  const single = isSingleHolding();
+  const intelligence = useMemo(
+    () => buildIntelligence(properties),
+    [properties]
+  );
+
   useEffect(() => {
     const h = new Date().getHours();
     if (h < 12) setGreeting("Good morning");
@@ -46,7 +60,7 @@ export default function Dashboard() {
   // Filter the portfolio time-series by selected range
   const series = useMemo(
     () => filterByRange(portfolioHistory, range),
-    [range]
+    [portfolioHistory, range]
   );
 
   // Compute return for the selected range from the series
@@ -64,9 +78,10 @@ export default function Dashboard() {
   const returnAmount = isAll ? portfolio.totalReturn : rangeReturn.amount;
   const returnPct = isAll ? portfolio.totalReturnPct : rangeReturn.pct;
 
-  // Show only top 2 properties as preview
-  const previewProperties = properties.slice(0, 2);
-  const insight = getRegionInsight();
+  // Show only top 2 properties as preview (or the single holding)
+  const previewProperties = properties.slice(0, single ? 1 : 2);
+  const insight = single ? "" : getRegionInsight(properties);
+  const sole = properties[0];
 
   return (
     <AppShell>
@@ -75,13 +90,15 @@ export default function Dashboard() {
         <div className="pt-3 pb-7 animate-fade-up">
           <p className="label-eyebrow mb-1.5">{greeting}</p>
           <h1 className="font-serif text-[1.375rem] tracking-tight">
-            {investor.firstName}
+            {user.firstName}
           </h1>
         </div>
 
-        {/* HERO — Total Portfolio Value with explicit Return context */}
+        {/* HERO — Portfolio / property value with explicit Return context */}
         <div className="mb-2 animate-fade-up" style={{ animationDelay: "60ms" }}>
-          <p className="label-eyebrow mb-3">Total Portfolio Value</p>
+          <p className="label-eyebrow mb-3">
+            {single ? "Property Value" : "Total Portfolio Value"}
+          </p>
           <div className="flex items-baseline gap-3 mb-5">
             <h2 className="font-serif num-hero">
               {fmt.currency(portfolio.currentValue)}
@@ -120,7 +137,7 @@ export default function Dashboard() {
           {/* Range tabs — control trend + return values together */}
           <div className="flex items-center justify-between">
             <p className="text-[10px] tracking-[0.16em] uppercase text-muted-foreground">
-              Portfolio value over time
+              {single ? "Value over time" : "Portfolio value over time"}
             </p>
             <TimeRangeTabs value={range} onChange={setRange} />
           </div>
@@ -168,40 +185,73 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* HIGHLIGHTS — Portfolio Intelligence (subtle, hairline-only) */}
+        {/* HIGHLIGHTS — multi-property comparisons, or single-holding snapshot */}
         <div className="mb-12 animate-fade-up" style={{ animationDelay: "210ms" }}>
           <div className="flex items-center gap-2 mb-5">
             <Sparkle className="w-3 h-3 text-primary" strokeWidth={1.5} />
             <p className="label-eyebrow">Highlights</p>
           </div>
 
-          <div className="space-y-4">
-            <Link href={`/property/${intelligence.bestPerformer.id}`} className="block group">
+          {single && sole ? (
+            <div className="space-y-4">
+              <Link href={`/property/${sole.id}`} className="block group">
+                <HighlightRow
+                  label="Your Holding"
+                  name={sole.name}
+                  value={fmt.pct(sole.capitalGrowthPct)}
+                  meta="capital growth"
+                />
+              </Link>
+              <div className="hairline" />
               <HighlightRow
-                label="Best Performer"
-                name={intelligence.bestPerformer.name}
-                value={fmt.pct(intelligence.bestPerformer.capitalGrowthPct)}
-                meta="capital growth"
-              />
-            </Link>
-            <div className="hairline" />
-            <Link href={`/property/${intelligence.highestYield.id}`} className="block group">
-              <HighlightRow
-                label="Highest Gross Yield"
-                name={intelligence.highestYield.name}
-                value={fmt.pctPlain(intelligence.highestYield.grossYield)}
+                label="Gross Yield"
+                name={`${sole.city.split(" ")[0]} · ${sole.status}`}
+                value={fmt.pctPlain(sole.grossYield)}
                 meta="gross yield"
+                static
               />
-            </Link>
-            <div className="hairline" />
-            <HighlightRow
-              label="Avg Gross Yield"
-              name="Across all properties"
-              value={fmt.pctPlain(intelligence.avgGrossYield)}
-              meta="gross yield"
-              static
-            />
-          </div>
+              <div className="hairline" />
+              <HighlightRow
+                label="Net Cash Flow"
+                name="Per month · after costs"
+                value={fmt.currency(sole.netMonthlyIncome)}
+                meta="monthly"
+                static
+              />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <Link href={`/property/${intelligence.bestPerformer.id}`} className="block group">
+                <HighlightRow
+                  label="Best Performer"
+                  name={intelligence.bestPerformer.name}
+                  value={fmt.pct(intelligence.bestPerformer.capitalGrowthPct)}
+                  meta="capital growth"
+                />
+              </Link>
+              <div className="hairline" />
+              {intelligence.highestYield && (
+                <>
+                  <Link href={`/property/${intelligence.highestYield.id}`} className="block group">
+                    <HighlightRow
+                      label="Highest Gross Yield"
+                      name={intelligence.highestYield.name}
+                      value={fmt.pctPlain(intelligence.highestYield.grossYield)}
+                      meta="gross yield"
+                    />
+                  </Link>
+                  <div className="hairline" />
+                </>
+              )}
+              <HighlightRow
+                label="Avg Gross Yield"
+                name="Across all properties"
+                value={fmt.pctPlain(intelligence.avgGrossYield)}
+                meta="gross yield"
+                static
+              />
+            </div>
+          )}
 
           {insight && (
             <p className="mt-6 text-xs italic text-muted-foreground leading-relaxed">
@@ -219,14 +269,14 @@ export default function Dashboard() {
             <div>
               <p className="label-eyebrow mb-1">Portfolio</p>
               <h3 className="font-serif text-xl">
-                {portfolio.propertyCount} properties
+                {propertyCountLabel(portfolio.propertyCount)}
               </h3>
             </div>
             <Link
-              href="/portfolio"
+              href={single && sole ? `/property/${sole.id}` : "/portfolio"}
               className="text-xs tracking-widest uppercase text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
             >
-              View all
+              {single ? "View details" : "View all"}
               <ArrowRight className="w-3 h-3" strokeWidth={1.5} />
             </Link>
           </div>
@@ -279,9 +329,9 @@ export default function Dashboard() {
         {/* Advisor footnote */}
         <div className="mt-11 mb-4 px-5 py-5 border border-border rounded-sm">
           <p className="label-eyebrow mb-3">Your Advisor</p>
-          <p className="font-serif text-base mb-1">{investor.advisor}</p>
+          <p className="font-serif text-base mb-1">{user.advisor}</p>
           <p className="text-xs text-muted-foreground mb-4">
-            {investor.advisorTitle}
+            {user.advisorTitle}
           </p>
           <button
             onClick={() => setContactOpen(true)}
@@ -372,7 +422,9 @@ function PortfolioInsights() {
     >
       <div className="flex items-center gap-2 mb-5">
         <Lightbulb className="w-3 h-3 text-primary" strokeWidth={1.5} />
-        <p className="label-eyebrow">Portfolio Insights</p>
+        <p className="label-eyebrow">
+          {isSingleHolding() ? "Insights" : "Portfolio Insights"}
+        </p>
       </div>
 
       <div className="space-y-3">

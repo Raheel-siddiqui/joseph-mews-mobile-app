@@ -1,97 +1,112 @@
 // Joseph Mews — Portfolio Intelligence Layer
 // Derives lightweight insights from the raw property data.
 // Pure functions, no UI concerns.
-import { properties, type Property } from "./data";
-
-// Only consider properties that are generating yield (exclude In Build / Vacant with 0 yield)
-const incomeProducing = properties.filter((p) => p.grossYield > 0);
+import type { Property } from "./data";
+import { getActiveProperties } from "./holdings";
 
 // Use gross yield as the primary performance signal; fall back to capital growth %
 function performanceScore(p: Property) {
-  // Income-producing: weighted blend of gross yield and capital growth
   if (p.grossYield > 0) return p.grossYield * 1.2 + p.capitalGrowthPct * 0.4;
-  // In-build: rely on capital growth only
   return p.capitalGrowthPct * 0.4;
 }
 
-const sortedByPerformance = [...properties].sort(
-  (a, b) => performanceScore(b) - performanceScore(a)
-);
-
-const sortedByYield = [...incomeProducing].sort(
-  (a, b) => b.grossYield - a.grossYield
-);
-
-const sortedByCapitalGrowth = [...properties].sort(
-  (a, b) => b.capitalGrowthPct - a.capitalGrowthPct
-);
-
-// Average gross yield across income-producing properties
-const avgGrossYield =
-  incomeProducing.length > 0
-    ? incomeProducing.reduce((sum, p) => sum + p.grossYield, 0) /
-      incomeProducing.length
-    : 0;
-
-// Average capital growth across all properties (incl. in-build)
-const avgCapitalGrowthPct =
-  properties.reduce((sum, p) => sum + p.capitalGrowthPct, 0) / properties.length;
-
-export const intelligence = {
-  bestPerformer: sortedByPerformance[0],
-  lowestPerformer: sortedByPerformance[sortedByPerformance.length - 1],
-  highestYield: sortedByYield[0],
-  highestCapitalGrowth: sortedByCapitalGrowth[0],
-  avgGrossYield,
-  avgCapitalGrowthPct,
+export type PortfolioIntelligence = {
+  bestPerformer: Property;
+  lowestPerformer: Property;
+  highestYield: Property | undefined;
+  highestCapitalGrowth: Property;
+  avgGrossYield: number;
+  avgCapitalGrowthPct: number;
 };
 
-// Per-property comparison signal vs portfolio average
+export function buildIntelligence(
+  props: Property[] = getActiveProperties()
+): PortfolioIntelligence {
+  const incomeProducing = props.filter((p) => p.grossYield > 0);
+  const sortedByPerformance = [...props].sort(
+    (a, b) => performanceScore(b) - performanceScore(a)
+  );
+  const sortedByYield = [...incomeProducing].sort(
+    (a, b) => b.grossYield - a.grossYield
+  );
+  const sortedByCapitalGrowth = [...props].sort(
+    (a, b) => b.capitalGrowthPct - a.capitalGrowthPct
+  );
+
+  const avgGrossYield =
+    incomeProducing.length > 0
+      ? incomeProducing.reduce((sum, p) => sum + p.grossYield, 0) /
+        incomeProducing.length
+      : 0;
+
+  const avgCapitalGrowthPct =
+    props.length > 0
+      ? props.reduce((sum, p) => sum + p.capitalGrowthPct, 0) / props.length
+      : 0;
+
+  return {
+    bestPerformer: sortedByPerformance[0],
+    lowestPerformer: sortedByPerformance[sortedByPerformance.length - 1],
+    highestYield: sortedByYield[0],
+    highestCapitalGrowth: sortedByCapitalGrowth[0],
+    avgGrossYield,
+    avgCapitalGrowthPct,
+  };
+}
+
+/** @deprecated Prefer buildIntelligence() for persona-aware data. */
+export const intelligence = buildIntelligence();
+
 export type Signal = "above" | "below" | "neutral";
 
-export function yieldSignal(p: Property): Signal {
-  if (p.grossYield === 0) return "neutral"; // in-build / vacant — no yield to compare
-  // Only flag as "above" / "below" if the difference is meaningful (> 0.05 pts)
-  const diff = p.grossYield - intelligence.avgGrossYield;
+export function yieldSignal(
+  p: Property,
+  avgGrossYield = buildIntelligence().avgGrossYield
+): Signal {
+  if (p.grossYield === 0) return "neutral";
+  const diff = p.grossYield - avgGrossYield;
   if (Math.abs(diff) < 0.05) return "neutral";
   return diff > 0 ? "above" : "below";
 }
 
-export function yieldDeltaLabel(p: Property): string | null {
+export function yieldDeltaLabel(
+  p: Property,
+  avgGrossYield = buildIntelligence().avgGrossYield
+): string | null {
   if (p.grossYield === 0) return null;
-  const diff = p.grossYield - intelligence.avgGrossYield;
+  const diff = p.grossYield - avgGrossYield;
   if (Math.abs(diff) < 0.05) return null;
   const sign = diff > 0 ? "+" : "";
   return `${sign}${diff.toFixed(2)} pts vs avg`;
 }
 
-// Region-level insight — derives a one-line headline from the data
-export function getRegionInsight(): string {
-  // Group properties by city stem (first word)
+export function getRegionInsight(
+  props: Property[] = getActiveProperties()
+): string {
+  if (props.length < 2) return "";
+
   const byRegion = new Map<string, Property[]>();
-  properties.forEach((p) => {
-    const region = p.city.split(" ")[0]; // London, Manchester, Birmingham, Liverpool
+  props.forEach((p) => {
+    const region = p.city.split(" ")[0];
     const arr = byRegion.get(region) ?? [];
     arr.push(p);
     byRegion.set(region, arr);
   });
 
-  // Find region with highest aggregate capital growth
   let topRegion = "";
   let topGrowth = 0;
-  byRegion.forEach((props, region) => {
-    const growth = props.reduce((sum, p) => sum + p.capitalGrowth, 0);
+  byRegion.forEach((regionProps, region) => {
+    const growth = regionProps.reduce((sum, p) => sum + p.capitalGrowth, 0);
     if (growth > topGrowth) {
       topGrowth = growth;
       topRegion = region;
     }
   });
 
-  // Find region with highest avg gross yield (income-producing only)
   let topYieldRegion = "";
   let topYield = 0;
-  byRegion.forEach((props, region) => {
-    const earners = props.filter((p) => p.grossYield > 0);
+  byRegion.forEach((regionProps, region) => {
+    const earners = regionProps.filter((p) => p.grossYield > 0);
     if (earners.length === 0) return;
     const avg =
       earners.reduce((sum, p) => sum + p.grossYield, 0) / earners.length;

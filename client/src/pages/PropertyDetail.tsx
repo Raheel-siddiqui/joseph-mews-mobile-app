@@ -10,6 +10,7 @@ import {
   timeRangeLabels,
   type TimeRange,
 } from "@/lib/data";
+import { ownsProperty } from "@/lib/holdings";
 import {
   progressPct,
   nextMortgagePayment,
@@ -34,7 +35,8 @@ import { ProjectionSection } from "@/components/ProjectionSection";
 
 export default function PropertyDetail() {
   const [, params] = useRoute<{ id: string }>("/property/:id");
-  const property = params?.id ? getProperty(params.id) : null;
+  const property =
+    params?.id && ownsProperty(params.id) ? getProperty(params.id) : null;
 
   const [chartRange, setChartRange] = useState<TimeRange>("1Y");
   const [scheduleFilter, setScheduleFilter] =
@@ -317,12 +319,15 @@ export default function PropertyDetail() {
                   />
                 </div>
                 {(() => {
-                  const rows =
+                  const rows = (
                     scheduleFilter === "all"
                       ? plan.schedule
                       : plan.schedule.filter(
                           (i) => i.status === scheduleFilter
-                        );
+                        )
+                  )
+                    .slice()
+                    .reverse();
                   if (rows.length === 0) {
                     return (
                       <p className="text-sm text-muted-foreground py-2">

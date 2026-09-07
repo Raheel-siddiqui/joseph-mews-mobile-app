@@ -1,9 +1,11 @@
-// Joseph Mews — demo session (email → investor vs non-investor journey)
+// Joseph Mews — demo session (email → investor / single-holding / prospect)
 import { investor } from "@/lib/data";
 
-export type Persona = "investor" | "prospect";
+export type Persona = "investor" | "single" | "prospect";
 
 export const INVESTOR_EMAIL = "alexander.whitfield@example.com";
+/** Demo email for the single-property investor journey. */
+export const SINGLE_EMAIL = "charlotte.ashford@example.com";
 /** Demo email for the non-investor (discovery) journey. */
 export const PROSPECT_EMAIL = "oliver.hartley@example.com";
 
@@ -20,12 +22,26 @@ export const prospect = {
   advisorTitle: investor.advisorTitle,
 };
 
-export type ActiveUser = typeof investor | typeof prospect;
+export const singleInvestor = {
+  name: "Charlotte Ashford",
+  firstName: "Charlotte",
+  email: SINGLE_EMAIL,
+  memberSince: "March 2022",
+  tier: "Silver",
+  advisor: investor.advisor,
+  advisorTitle: investor.advisorTitle,
+};
+
+export type ActiveUser =
+  | typeof investor
+  | typeof singleInvestor
+  | typeof prospect;
 
 export function resolvePersona(email: string): Persona {
-  return email.trim().toLowerCase() === INVESTOR_EMAIL
-    ? "investor"
-    : "prospect";
+  const normalised = email.trim().toLowerCase();
+  if (normalised === INVESTOR_EMAIL) return "investor";
+  if (normalised === SINGLE_EMAIL) return "single";
+  return "prospect";
 }
 
 function canUseSession(): boolean {
@@ -51,7 +67,9 @@ export function clearSession() {
 export function getPersona(): Persona {
   if (!canUseSession()) return "investor";
   const stored = sessionStorage.getItem(PERSONA_KEY);
-  if (stored === "investor" || stored === "prospect") return stored;
+  if (stored === "investor" || stored === "single" || stored === "prospect") {
+    return stored;
+  }
   return "investor";
 }
 
@@ -61,11 +79,14 @@ export function getSessionEmail(): string | null {
 }
 
 export function isInvestor(): boolean {
-  return getPersona() === "investor";
+  const persona = getPersona();
+  return persona === "investor" || persona === "single";
 }
 
 export function getActiveUser(): ActiveUser {
-  if (isInvestor()) return investor;
+  const persona = getPersona();
+  if (persona === "investor") return investor;
+  if (persona === "single") return singleInvestor;
   const email = getSessionEmail();
   return email ? { ...prospect, email } : prospect;
 }
@@ -81,5 +102,5 @@ export function userInitials(user: ActiveUser = getActiveUser()): string {
 }
 
 export function homePathForPersona(persona: Persona = getPersona()): string {
-  return persona === "investor" ? "/dashboard" : "/explore";
+  return persona === "prospect" ? "/explore" : "/dashboard";
 }

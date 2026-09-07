@@ -3,46 +3,56 @@
 // Insights are generated deterministically from the underlying portfolio so
 // figures stay consistent across the app — never hand-written narrative.
 
-import { properties, portfolio, type Property } from "./data";
+import type { Property } from "./data";
+import {
+  getActivePortfolio,
+  getActiveProperties,
+  type PortfolioSnapshot,
+} from "./holdings";
 
 export type InsightTone = "neutral" | "positive" | "watch";
 
 export interface Insight {
   id: string;
   tone: InsightTone;
-  category: string;        // small label in the eyebrow ("Concentration")
-  headline: string;        // 1-line headline
-  body: string;            // 1 short supporting line
-  metric?: string;         // optional bold number to anchor the card
+  category: string;
+  headline: string;
+  body: string;
+  metric?: string;
 }
 
-const TARGET_GROSS_YIELD = 5.0;          // % — investor benchmark
-const HIGH_CONCENTRATION_PCT = 50;       // single-city threshold
-
-// ---- helpers ---------------------------------------------------------------
+const TARGET_GROSS_YIELD = 5.0;
+const HIGH_CONCENTRATION_PCT = 50;
 
 function shortCity(city: string): string {
-  // "London W1K" -> "London", "Birmingham B3" -> "Birmingham"
   return city.split(" ")[0];
 }
 
-function cityValueShare(): { city: string; pct: number; value: number }[] {
+function cityValueShare(
+  props: Property[],
+  totalValue: number
+): { city: string; pct: number; value: number }[] {
   const map = new Map<string, number>();
-  properties.forEach((p) => {
+  props.forEach((p) => {
     const c = shortCity(p.city);
     map.set(c, (map.get(c) ?? 0) + p.currentValue);
   });
-  const total = portfolio.currentValue;
   const entries: { city: string; value: number; pct: number }[] = [];
   map.forEach((value, city) => {
-    entries.push({ city, value, pct: (value / total) * 100 });
+    entries.push({
+      city,
+      value,
+      pct: totalValue > 0 ? (value / totalValue) * 100 : 0,
+    });
   });
   return entries.sort((a, b) => b.pct - a.pct);
 }
 
-function avgGrossYieldByCity(): { city: string; avg: number; count: number }[] {
+function avgGrossYieldByCity(
+  props: Property[]
+): { city: string; avg: number; count: number }[] {
   const groups = new Map<string, Property[]>();
-  properties.forEach((p) => {
+  props.forEach((p) => {
     if (p.status !== "Tenanted") return;
     const c = shortCity(p.city);
     if (!groups.has(c)) groups.set(c, []);
@@ -57,12 +67,25 @@ function avgGrossYieldByCity(): { city: string; avg: number; count: number }[] {
   return out.sort((a, b) => b.avg - a.avg);
 }
 
-// ---- insight builders ------------------------------------------------------
-
-function concentrationInsight(): Insight | null {
-  const shares = cityValueShare();
+function concentrationInsight(
+  props: Property[],
+  snap: PortfolioSnapshot
+): Insight | null {
+  const shares = cityValueShare(props, snap.currentValue);
   const top = shares[0];
   if (!top || top.pct < HIGH_CONCENTRATION_PCT) return null;
+
+  if (props.length === 1) {
+    return {
+      id: "concentration",
+      tone: "watch",
+      category: "Single holding",
+      headline: `Your entire portfolio sits in one ${top.city} property.`,
+      body: `A second holding in another region would diversify market exposure.`,
+      metric: `100%`,
+    };
+  }
+
   return {
     id: "concentration",
     tone: "watch",
@@ -75,8 +98,8 @@ function concentrationInsight(): Insight | null {
   };
 }
 
-function regionalYieldInsight(): Insight | null {
-  const ys = avgGrossYieldByCity();
+function regionalYieldInsight(props: Property[]): Insight | null {
+  const ys = avgGrossYieldByCity(props);
   if (ys.length < 2) return null;
   const best = ys[0];
   const worst = ys[ys.length - 1];
@@ -93,14 +116,14 @@ function regionalYieldInsight(): Insight | null {
   };
 }
 
-function yieldVsTargetInsight(): Insight | null {
-  const gy = portfolio.grossYield;
+function yieldVsTargetInsight(snap: PortfolioSnapshot): Insight | null {
+  const gy = snap.grossYield;
   if (gy >= TARGET_GROSS_YIELD) return null;
   return {
     id: "yield-vs-target",
     tone: "watch",
     category: "Income Performance",
-    headline: `Portfolio gross yield is below target (${gy.toFixed(
+    headline: `Gross yield is below target (${gy.toFixed(
       1
     )}% vs ${TARGET_GROSS_YIELD.toFixed(0)}% benchmark).`,
     body: `Review rental income and acquisition pricing with your advisor.`,
@@ -108,9 +131,9 @@ function yieldVsTargetInsight(): Insight | null {
   };
 }
 
-function growthVsCashInsight(): Insight | null {
-  const growthPct = portfolio.totalReturnPct;
-  const gy = portfolio.grossYield;
+function growthVsCashInsight(snap: PortfolioSnapshot): Insight | null {
+  const growthPct = snap.totalReturnPct;
+  const gy = snap.grossYield;
   if (growthPct < 5 || gy >= TARGET_GROSS_YIELD - 1) return null;
   return {
     id: "growth-vs-cash",
@@ -121,13 +144,13 @@ function growthVsCashInsight(): Insight | null {
       1
     )}% since purchase, yet gross yield sits at ${gy.toFixed(
       1
-    )}% — typical of a growth-weighted portfolio.`,
+    )}% — typical of a growth-weighted holding.`,
     metric: `+${growthPct.toFixed(0)}%`,
   };
 }
 
-function pipelineInsight(): Insight | null {
-  const inBuild = properties.filter((p) => p.status === "In Build");
+function pipelineInsight(props: Property[]): Insight | null {
+  const inBuild = props.filter((p) => p.status === "In Build");
   if (inBuild.length === 0) return null;
   const expectedAnnualRent = inBuild.reduce(
     (s, p) => s + (p.expectedRent ?? 0) * 12,
@@ -148,17 +171,17 @@ function pipelineInsight(): Insight | null {
   };
 }
 
-// ---- public API ------------------------------------------------------------
-
-export function getPortfolioInsights(): Insight[] {
+export function getPortfolioInsights(
+  props: Property[] = getActiveProperties(),
+  snap: PortfolioSnapshot = getActivePortfolio()
+): Insight[] {
   const candidates = [
-    concentrationInsight(),
-    regionalYieldInsight(),
-    yieldVsTargetInsight(),
-    growthVsCashInsight(),
-    pipelineInsight(),
+    concentrationInsight(props, snap),
+    regionalYieldInsight(props),
+    yieldVsTargetInsight(snap),
+    growthVsCashInsight(snap),
+    pipelineInsight(props),
   ].filter((x): x is Insight => x !== null);
 
-  // Cap at 5 — the order above is editorial priority
   return candidates.slice(0, 5);
 }

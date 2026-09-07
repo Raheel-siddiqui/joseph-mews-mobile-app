@@ -7,12 +7,25 @@
 // handling, LTV, and stamp duty estimation are layered *on top* of the
 // projection engine, never replacing its formulas.
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { ContactAdvisorSheet } from "@/components/ContactAdvisorSheet";
+import {
+  matchOpportunities,
+  reasonsForOpportunity,
+  type FitReason,
+  type InvestmentStyle,
+  type MatchResult,
+} from "@/lib/calculatorMatching";
 import { fmt } from "@/lib/data";
-import { opportunities, type UnitOption } from "@/lib/explore";
+import { opportunities } from "@/lib/explore";
 import { projectInvestment } from "@/lib/projection";
+import {
+  getMortgageRate,
+  getSdltRate,
+  RESIDENCIES,
+  type Residency,
+} from "@/lib/residencyRates";
 import {
   Area,
   ComposedChart,
@@ -26,7 +39,6 @@ import {
   ArrowRight,
   ChevronDown,
   Info,
-  Building2,
   Wallet,
   Landmark,
   Sparkle,
@@ -35,27 +47,26 @@ import {
 } from "lucide-react";
 
 type InvestmentType = "Mortgage" | "Cash";
-type Nationality = "UK" | "Non-UK";
 type MortgageType = "Interest-only" | "Repayment";
-type RiskAppetite = "Cautious" | "Balanced" | "Growth";
 
 const HOLDING_PERIODS = [5, 10, 15] as const;
 type HoldingPeriod = (typeof HOLDING_PERIODS)[number];
 
-// Mapping from risk appetite to a default LTV. Higher risk = higher leverage.
-const RISK_TO_LTV: Record<RiskAppetite, number> = {
-  Cautious: 55,
-  Balanced: 65,
-  Growth: 75,
-};
+const INVESTMENT_STYLES: InvestmentStyle[] = [
+  "Income Focused",
+  "Growth Focused",
+  "Balanced",
+  "Not Sure",
+];
+
+/** Fixed default LTV — style ranks matches only; it must not change leverage. */
+const DEFAULT_LTV = 65;
 
 // Assumption defaults (kept centralised so they can be tuned later).
 const ASSUMPTIONS = {
   capitalGrowth: 4.5,
   rentalGrowth: 3.0,
   costGrowth: 2.5,
-  ukMortgageRate: 5.25,
-  nonUkMortgageRate: 6.25,
   managementFeePctOfRent: 10, // %
   serviceChargePctOfValue: 0.5, // %
 };
@@ -64,50 +75,38 @@ export default function CalculatorHome() {
   // ----- Step 1: Deposit-led intent -----
   const [deposit, setDeposit] = useState<number>(50_000);
   const [advisorOpen, setAdvisorOpen] = useState(false);
-  const [risk, setRisk] = useState<RiskAppetite>("Balanced");
+  const [style, setStyle] = useState<InvestmentStyle | null>(null);
 
-  // ----- Step 3: Investment selection (was Step 1) -----
+  // ----- Step 3: Investment selection -----
   const [oppId, setOppId] = useState<string>(opportunities[0].id);
+  const [hasSelectedMatch, setHasSelectedMatch] = useState(false);
   const opp = useMemo(
-    () => opportunities.find((o) => o.id === oppId)!,
+    () => opportunities.find((o) => o.id === oppId) ?? opportunities[0],
     [oppId]
   );
   const [unitType, setUnitType] = useState<string>(opp.unitTypes[0].type);
-  const unit: UnitOption = useMemo(
-    () =>
-      opp.unitTypes.find((u) => u.type === unitType) ?? opp.unitTypes[0],
-    [opp, unitType]
-  );
-  const [price, setPrice] = useState<number>(unit.fromPrice);
+  const [price, setPrice] = useState<number>(opp.unitTypes[0].fromPrice);
 
-  // Sync price when development/unit changes
-  useMemo(() => {
-    setUnitType(opp.unitTypes[0].type);
-  }, [oppId]); // eslint-disable-line react-hooks/exhaustive-deps
-  useMemo(() => {
-    setPrice(unit.fromPrice);
-  }, [unit.fromPrice]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Optional Step 3 filters
+  const [filterCity, setFilterCity] = useState<string>("All");
+  const [filterDevelopment, setFilterDevelopment] = useState<string>("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
-  // ----- Step 2/4: Investment setup -----
+  // ----- Step 2: Investment setup -----
   const [investmentType, setInvestmentType] =
     useState<InvestmentType>("Mortgage");
-  const [nationality, setNationality] = useState<Nationality>("Non-UK");
-  const [ltv, setLtv] = useState<number>(RISK_TO_LTV.Balanced);
+  const [residency, setResidency] = useState<Residency | null>(null);
+  const [ltv, setLtv] = useState<number>(DEFAULT_LTV);
   const [mortgageType, setMortgageType] =
     useState<MortgageType>("Interest-only");
   const [holding, setHolding] = useState<HoldingPeriod>(10);
 
-  // When the investor changes risk appetite, suggest a matching LTV.
-  // (Use a guarded effect-style update via useMemo with side-effect only on change.)
-  useMemo(() => {
-    setLtv(RISK_TO_LTV[risk]);
-  }, [risk]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const isMortgage = investmentType === "Mortgage";
-  const mortgageRate =
-    nationality === "UK"
-      ? ASSUMPTIONS.ukMortgageRate
-      : ASSUMPTIONS.nonUkMortgageRate;
+  const effectiveStyle: InvestmentStyle = style ?? "Not Sure";
+  // Rates need a residency; fall back to UK for display math until selected.
+  const rateResidency: Residency = residency ?? "UK";
+  const mortgageRate = getMortgageRate(rateResidency);
+  const sdltRate = getSdltRate(rateResidency);
 
   // Buying power budget (mirrors BuyingPowerCard math) so downstream rails can
   // filter by it. budget = deposit / (1 − LTV%).
@@ -185,14 +184,58 @@ export default function CalculatorHome() {
   const netMonthlyIncome = Math.round(netAnnualIncome / 12);
   const grossYieldPct = price > 0 ? (annualGrossRent / price) * 100 : 0;
 
-  // SDLT (rough): 5% across the board for non-UK residents on overseas surcharge
-  // territory; UK residents simplified at 3% for additional dwellings. This is
-  // illustrative — actual SDLT is banded.
-  const sdltRate = nationality === "UK" ? 0.03 : 0.05;
+  // SDLT illustrative: UK 3%, all other residencies 5%.
   const sdlt = Math.round(price * sdltRate);
   const legalFees = 2500;
   const cashDeposit = price - loanAmount;
   const initialCashRequired = cashDeposit + sdlt + legalFees;
+
+  const matchInput = useMemo(
+    () => ({
+      opportunities,
+      budget,
+      deposit,
+      style: effectiveStyle,
+      horizonYears: holding,
+      isMortgage,
+      ltv,
+      sdltRate,
+      legalFees,
+      cityFilter: filterCity,
+      developmentFilter: filterDevelopment || null,
+    }),
+    [
+      budget,
+      deposit,
+      effectiveStyle,
+      holding,
+      isMortgage,
+      ltv,
+      sdltRate,
+      legalFees,
+      filterCity,
+      filterDevelopment,
+    ],
+  );
+
+  const { exact: exactMatches, stretch: stretchMatches } = useMemo(
+    () => matchOpportunities(matchInput),
+    [matchInput],
+  );
+
+  const selectedFitReasons = useMemo(
+    () => reasonsForOpportunity(opp, matchInput),
+    [opp, matchInput],
+  );
+
+  // Clear selection if upstream edits knock the property out of exact eligibility.
+  useEffect(() => {
+    if (!hasSelectedMatch) return;
+    const stillExact = exactMatches.some((m) => m.opportunity.id === oppId);
+    if (!stillExact) {
+      setHasSelectedMatch(false);
+    }
+  }, [exactMatches, oppId, hasSelectedMatch]);
 
   // ----- Mini chart data -----
   const chartData = useMemo(() => {
@@ -225,17 +268,28 @@ export default function CalculatorHome() {
   const canNext = step < totalSteps;
 
   function goNext() {
-    if (canNext) {
-      setStep((s) => s + 1);
-      // Reset scroll on transition for a true "next screen" feeling.
-      requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
-    }
+    if (!canNext) return;
+    if (step === 1 && style === null) setStyle("Not Sure");
+    if (step === 2 && isMortgage && !residency) return;
+    setStep((s) => s + 1);
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
   }
   function goBack() {
     if (canBack) {
       setStep((s) => s - 1);
       requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
     }
+  }
+
+  function selectMatch(match: MatchResult) {
+    const o = match.opportunity;
+    const firstUnit = o.unitTypes[0];
+    setOppId(o.id);
+    setUnitType(firstUnit.type);
+    setPrice(o.fromPrice);
+    setHasSelectedMatch(true);
+    setStep(4);
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
   }
 
   return (
@@ -258,11 +312,11 @@ export default function CalculatorHome() {
           </h1>
           <p className="text-[13px] text-muted-foreground leading-relaxed max-w-[36ch]">
             {step === 1 &&
-              "Tell us your deposit, risk appetite and how long you'd like to hold."}
+              "Tell us your deposit, investment style and how long you'd like to hold."}
             {step === 2 &&
               "Based on your deposit, here's what you can comfortably invest."}
             {step === 3 &&
-              "Properties filtered to your budget. Tap one to model returns."}
+              "Auto-matched to your buying power. Tap one to model returns."}
             {step === 4 &&
               "A quick decision snapshot before the deep dive."}
             {step === 5 &&
@@ -284,31 +338,25 @@ export default function CalculatorHome() {
 
           <div>
             <div className="flex items-baseline justify-between mb-2">
-              <span className="label-eyebrow">Risk Appetite</span>
-              <span className="text-[10px] text-muted-foreground/70 tabular-nums">
-                Suggests {RISK_TO_LTV[risk]}% LTV
+              <span className="label-eyebrow">Investment Style</span>
+              <span className="text-[10px] text-muted-foreground/70">
+                Ranks matches only
               </span>
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              {(
-                [
-                  { v: "Cautious", l: "Low" },
-                  { v: "Balanced", l: "Medium" },
-                  { v: "Growth", l: "High" },
-                ] as { v: RiskAppetite; l: string }[]
-              ).map((o) => {
-                const active = risk === o.v;
+            <div className="grid grid-cols-2 gap-2">
+              {INVESTMENT_STYLES.map((s) => {
+                const active = style === s;
                 return (
                   <button
-                    key={o.v}
-                    onClick={() => setRisk(o.v)}
-                    className={`tap press py-3 rounded-sm border text-[12px] uppercase tracking-[0.14em] transition-colors ${
+                    key={s}
+                    onClick={() => setStyle(s)}
+                    className={`tap press py-3 rounded-sm border text-[11px] uppercase tracking-[0.12em] transition-colors ${
                       active
                         ? "border-primary text-primary bg-primary/10"
                         : "border-border text-muted-foreground active:text-foreground"
                     }`}
                   >
-                    {o.l}
+                    {s}
                   </button>
                 );
               })}
@@ -339,13 +387,10 @@ export default function CalculatorHome() {
           setInvestmentType={setInvestmentType}
           mortgageType={mortgageType}
           setMortgageType={setMortgageType}
-          mortgageRate={
-            nationality === "UK"
-              ? ASSUMPTIONS.ukMortgageRate
-              : ASSUMPTIONS.nonUkMortgageRate
-          }
+          mortgageRate={mortgageRate}
+          residency={residency}
+          setResidency={setResidency}
         />
-
         </div>
         )}
 
@@ -353,121 +398,77 @@ export default function CalculatorHome() {
         {step === 3 && (
         <div key="step-3" className="animate-fade-up">
         <MatchedOpportunities
+          exact={exactMatches}
+          stretch={stretchMatches}
           budget={budget}
-          deposit={deposit}
-          selectedId={oppId}
-          onSelect={(id) => {
-            setOppId(id);
-            // Auto-advance into the Returns step on selection
-            setStep(4);
+          selectedId={hasSelectedMatch ? oppId : null}
+          onSelect={selectMatch}
+          onEditFinance={() => {
+            setStep(2);
             requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
           }}
+          onSpeakToAdvisor={() => setAdvisorOpen(true)}
         />
-        <Step number="Refine" title="Refine Selection" />
-        <div className="space-y-5 mb-9">
-          <SelectField
-            label="Development"
-            value={oppId}
-            onChange={setOppId}
-            options={opportunities.map((o) => ({
-              value: o.id,
-              label: `${o.name} · ${o.city}`,
-            }))}
-          />
-          <SelectField
-            label="Unit Type"
-            value={unitType}
-            onChange={setUnitType}
-            options={opp.unitTypes.map((u) => ({
-              value: u.type,
-              label: `${u.type} · from ${fmt.currency(u.fromPrice)}`,
-            }))}
-          />
-          <CurrencyField
-            label="Purchase Price"
-            value={price}
-            onChange={setPrice}
-            hint={`From ${fmt.currency(unit.fromPrice)}`}
-          />
-          <ReadonlyField label="City" value={`${opp.city} · ${opp.region}`} />
-        </div>
 
-        <Step number="Setup" title="Investor Setup" />
-        <div className="space-y-6 mb-9">
-          <SegmentField
-            label="Nationality"
-            value={nationality}
-            onChange={(v) => setNationality(v as Nationality)}
-            options={[
-              { value: "UK", label: "UK Resident" },
-              { value: "Non-UK", label: "Non-UK" },
-            ]}
-            hint={`Mortgage rate · ${
-              (nationality === "UK"
-                ? ASSUMPTIONS.ukMortgageRate
-                : ASSUMPTIONS.nonUkMortgageRate
-              ).toFixed(2)
-            }%`}
-          />
-
-          {/* LTV / Mortgage Type are surfaced in Step 2 — keep advanced fine
-              tuning here when needed for clarity. */}
-          {false && isMortgage && (
-            <div className="animate-fade-up">
-              <div className="flex items-baseline justify-between mb-3">
-                <span className="label-eyebrow">Loan to Value</span>
-                <span className="font-serif text-sm tabular-nums text-primary">
-                  {ltv}%
-                </span>
-              </div>
-              <input
-                type="range"
-                min={50}
-                max={80}
-                step={5}
-                value={ltv}
-                onChange={(e) => setLtv(Number(e.target.value))}
-                className="w-full h-1 accent-primary cursor-pointer"
-                style={{
-                  background: `linear-gradient(to right, #C6A46C 0%, #C6A46C ${
-                    ((ltv - 50) / 30) * 100
-                  }%, rgba(245,241,232,0.12) ${
-                    ((ltv - 50) / 30) * 100
-                  }%, rgba(245,241,232,0.12) 100%)`,
-                  WebkitAppearance: "none",
-                  borderRadius: 999,
-                }}
+        {/* Optional refinements */}
+        <div className="mb-9">
+          <button
+            onClick={() => setFiltersOpen((o) => !o)}
+            className="tap press w-full flex items-center justify-between py-3 border-t border-b border-border text-[10px] tracking-[0.18em] uppercase text-muted-foreground active:text-foreground transition-colors"
+            aria-expanded={filtersOpen}
+          >
+            <span>Optional filters</span>
+            <ChevronDown
+              className={`w-3.5 h-3.5 transition-transform ${
+                filtersOpen ? "rotate-180" : ""
+              }`}
+              strokeWidth={1.5}
+            />
+          </button>
+          {filtersOpen && (
+            <div className="space-y-5 mt-5 animate-fade-up">
+              <SelectField
+                label="City"
+                value={filterCity}
+                onChange={setFilterCity}
+                options={[
+                  { value: "All", label: "All cities" },
+                  ...Array.from(new Set(opportunities.map((o) => o.city)))
+                    .sort()
+                    .map((c) => ({ value: c, label: c })),
+                ]}
               />
-              <div className="flex justify-between mt-2 text-[10px] tracking-[0.16em] uppercase text-muted-foreground/70">
-                <span>50%</span>
-                <span>65%</span>
-                <span>80%</span>
-              </div>
-              <div className="grid grid-cols-2 gap-x-4 mt-5">
-                <DataPoint
-                  label="Loan Amount"
-                  value={fmt.currency(loanAmount)}
+              <SelectField
+                label="Development"
+                value={filterDevelopment}
+                onChange={setFilterDevelopment}
+                options={[
+                  { value: "", label: "Any development" },
+                  ...opportunities
+                    .filter((o) => o.status !== "Sold Out")
+                    .map((o) => ({
+                      value: o.id,
+                      label: `${o.name} · ${o.city}`,
+                    })),
+                ]}
+              />
+              {hasSelectedMatch && (
+                <SelectField
+                  label="Unit Type"
+                  value={unitType}
+                  onChange={(v) => {
+                    setUnitType(v);
+                    const u = opp.unitTypes.find((x) => x.type === v);
+                    if (u) setPrice(u.fromPrice);
+                  }}
+                  options={opp.unitTypes.map((u) => ({
+                    value: u.type,
+                    label: `${u.type} · from ${fmt.currency(u.fromPrice)}`,
+                  }))}
                 />
-                <DataPoint
-                  label="Cash Deposit"
-                  value={fmt.currency(cashDeposit)}
-                />
-              </div>
+              )}
             </div>
           )}
-
-          {isMortgage && (
-            <SegmentField
-              label="Mortgage Type"
-              value={mortgageType}
-              onChange={(v) => setMortgageType(v as MortgageType)}
-              options={[
-                { value: "Interest-only", label: "Interest-only" },
-                { value: "Repayment", label: "Repayment" },
-              ]}
-            />
-          )}
-
         </div>
         </div>
         )}
@@ -488,6 +489,8 @@ export default function CalculatorHome() {
             requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
           }}
         />
+
+        <WhyThisFits reasons={selectedFitReasons} />
 
         {/* ---- Detailed Results ---- */}
         <div className="border-t border-border pt-7 mb-7 animate-fade-up">
@@ -602,6 +605,7 @@ export default function CalculatorHome() {
           canBack={canBack}
           canNext={canNext}
           deposit={deposit}
+          residencyRequired={isMortgage && !residency}
           onBack={goBack}
           onNext={goNext}
         />
@@ -725,21 +729,6 @@ function CurrencyField({
   );
 }
 
-function ReadonlyField({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <span className="label-eyebrow block mb-2">{label}</span>
-      <div className="flex items-center gap-2 py-2 border-b border-border/60">
-        <Building2
-          className="w-4 h-4 text-muted-foreground/70"
-          strokeWidth={1.5}
-        />
-        <span className="font-serif text-base text-foreground/85">{value}</span>
-      </div>
-    </div>
-  );
-}
-
 function SegmentField({
   label,
   value,
@@ -853,15 +842,6 @@ function PeriodTabs({
           </button>
         );
       })}
-    </div>
-  );
-}
-
-function DataPoint({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="label-eyebrow mb-1.5">{label}</p>
-      <p className="font-serif text-base tabular-nums">{value}</p>
     </div>
   );
 }
@@ -999,6 +979,8 @@ function BuyingPowerCard({
   mortgageType,
   setMortgageType,
   mortgageRate,
+  residency,
+  setResidency,
 }: {
   deposit: number;
   ltv: number;
@@ -1008,6 +990,8 @@ function BuyingPowerCard({
   mortgageType: MortgageType;
   setMortgageType: (v: MortgageType) => void;
   mortgageRate: number;
+  residency: Residency | null;
+  setResidency: (v: Residency) => void;
 }) {
   const isMortgage = investmentType === "Mortgage";
 
@@ -1089,6 +1073,45 @@ function BuyingPowerCard({
 
       {isMortgage && (
         <>
+          {/* Residency → indicative mortgage rate */}
+          <div className="mb-6">
+            <div className="flex items-baseline justify-between mb-2">
+              <span className="label-eyebrow">Where are you currently resident?</span>
+              {residency && (
+                <span className="text-[10px] text-muted-foreground/70 tabular-nums">
+                  Indicative · {mortgageRate.toFixed(2)}%
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {RESIDENCIES.map((r) => {
+                const active = residency === r;
+                return (
+                  <button
+                    key={r}
+                    onClick={() => setResidency(r)}
+                    className={`tap press py-3 rounded-sm border text-[11px] uppercase tracking-[0.12em] transition-colors ${
+                      active
+                        ? "border-primary text-primary bg-primary/10"
+                        : "border-border text-muted-foreground active:text-foreground"
+                    }`}
+                  >
+                    {r}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-muted-foreground/75 leading-relaxed mt-2.5">
+              Residency sets your indicative mortgage rate. Rates are illustrative
+              and may be updated by Joseph Mews.
+            </p>
+            {!residency && (
+              <p className="text-[11px] text-primary/90 mt-2">
+                Select residency to continue.
+              </p>
+            )}
+          </div>
+
           {/* LTV slider */}
           <div className="mb-6">
             <div className="flex items-baseline justify-between mb-3">
@@ -1128,7 +1151,11 @@ function BuyingPowerCard({
                 { value: "Interest-only", label: "Interest-only" },
                 { value: "Repayment", label: "Repayment" },
               ]}
-              hint={`Rate · ${mortgageRate.toFixed(2)}%`}
+              hint={
+                residency
+                  ? `Indicative rate · ${mortgageRate.toFixed(2)}%`
+                  : undefined
+              }
             />
           </div>
 
@@ -1180,41 +1207,22 @@ function BPItem({
 /* ---------- Matched Investment Opportunities ---------- */
 
 function MatchedOpportunities({
+  exact,
+  stretch,
   budget,
-  deposit: _deposit,
   selectedId,
   onSelect,
+  onEditFinance,
+  onSpeakToAdvisor,
 }: {
+  exact: MatchResult[];
+  stretch: MatchResult[];
   budget: number;
-  deposit: number;
-  selectedId: string;
-  onSelect: (id: string) => void;
+  selectedId: string | null;
+  onSelect: (match: MatchResult) => void;
+  onEditFinance: () => void;
+  onSpeakToAdvisor: () => void;
 }) {
-  // Allow up to 8% slack so investors near the boundary still see options.
-  const ceiling = Math.round(budget * 1.08);
-
-  const matches = useMemo(() => {
-    const inBudget = opportunities.filter(
-      (o) => o.fromPrice <= ceiling && o.status !== "Sold Out",
-    );
-    // Sort: prioritise true within-budget ones, then by 5Y growth + yield mix.
-    const score = (o: (typeof opportunities)[number]) =>
-      (o.fromPrice <= budget ? 100 : 0) + o.capitalGrowth5Y + o.grossYield * 2;
-    return [...inBudget].sort((a, b) => score(b) - score(a));
-  }, [budget, ceiling]);
-
-  // City filter (optional, simple chips). Default = All.
-  const cities = useMemo(
-    () => Array.from(new Set(opportunities.map((o) => o.city))).sort(),
-    [],
-  );
-  const [city, setCity] = useState<string>("All");
-
-  const visible = useMemo(
-    () => (city === "All" ? matches : matches.filter((o) => o.city === city)),
-    [matches, city],
-  );
-
   return (
     <div className="mb-9 animate-fade-up">
       <div className="mb-4">
@@ -1223,108 +1231,182 @@ function MatchedOpportunities({
           Matched Investment Opportunities
         </h2>
         <p className="text-[12px] text-muted-foreground leading-relaxed">
-          {visible.length > 0
-            ? `Filtered to your ${fmt.currency(budget)} budget · tap to model returns.`
-            : `No matches at ${fmt.currency(budget)}. Try adjusting your deposit or LTV.`}
+          {exact.length > 0
+            ? `Up to 3 exact matches within ${fmt.currency(budget)} · tap to model returns.`
+            : `No exact matches at your current buying power.`}
         </p>
       </div>
 
-      {/* City chips */}
-      {visible.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-3 mb-1 hide-scrollbar">
-          {["All", ...cities].map((c) => {
-            const active = c === city;
-            return (
-              <button
-                key={c}
-                onClick={() => setCity(c)}
-                className={`tap shrink-0 px-3 py-1.5 rounded-full border text-[11px] tracking-[0.1em] uppercase transition-colors ${
-                  active
-                    ? "border-primary text-primary bg-primary/10"
-                    : "border-border text-muted-foreground active:text-foreground"
-                }`}
-              >
-                {c}
-              </button>
-            );
-          })}
+      {exact.length === 0 ? (
+        <div className="rounded-sm border border-border bg-card/40 px-5 py-6 mb-4">
+          <p className="font-serif text-base mb-2">No exact matches</p>
+          <p className="text-[12.5px] text-muted-foreground leading-relaxed mb-5">
+            No exact matches at your current buying power. Adjust your deposit or
+            finance settings, or speak with an advisor.
+          </p>
+          <div className="flex flex-col gap-2.5">
+            <button
+              onClick={onEditFinance}
+              className="tap press w-full py-3.5 rounded-sm bg-primary text-primary-foreground text-[12px] tracking-[0.1em] uppercase font-medium active:opacity-90"
+            >
+              Edit Deposit / Finance
+            </button>
+            <button
+              onClick={onSpeakToAdvisor}
+              className="tap press w-full py-3.5 rounded-sm border border-border text-[12px] tracking-[0.1em] uppercase text-muted-foreground active:text-foreground"
+            >
+              Speak to Advisor
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3 mb-5">
+          {exact.map((m) => (
+            <MatchCard
+              key={m.opportunity.id}
+              match={m}
+              active={m.opportunity.id === selectedId}
+              onSelect={() => onSelect(m)}
+            />
+          ))}
         </div>
       )}
 
-      {/* Cards */}
-      <div className="space-y-3">
-        {visible.map((o) => {
-          const within = o.fromPrice <= budget;
-          const active = o.id === selectedId;
-          return (
-            <button
-              key={o.id}
-              onClick={() => onSelect(o.id)}
-              className={`tap press w-full text-left rounded-sm border transition-colors overflow-hidden ${
-                active
-                  ? "border-primary bg-primary/[0.05]"
-                  : "border-border active:bg-card/60"
+      {stretch.length > 0 && (
+        <div className="mt-6">
+          <p className="label-eyebrow mb-2">Near your budget</p>
+          <p className="text-[11px] text-muted-foreground mb-3">
+            Stretch options — above your current buying power.
+          </p>
+          <div className="space-y-3">
+            {stretch.map((m) => (
+              <MatchCard
+                key={m.opportunity.id}
+                match={m}
+                active={m.opportunity.id === selectedId}
+                onSelect={() => onSelect(m)}
+                stretch
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MatchCard({
+  match,
+  active,
+  onSelect,
+  stretch = false,
+}: {
+  match: MatchResult;
+  active: boolean;
+  onSelect: () => void;
+  stretch?: boolean;
+}) {
+  const o = match.opportunity;
+  return (
+    <button
+      onClick={onSelect}
+      className={`tap press w-full text-left rounded-sm border transition-colors overflow-hidden ${
+        active
+          ? "border-primary bg-primary/[0.05]"
+          : "border-border active:bg-card/60"
+      }`}
+    >
+      <div className="flex gap-3.5 p-3">
+        <div className="w-20 h-20 rounded-sm overflow-hidden shrink-0 bg-card relative">
+          <img
+            src={o.image}
+            alt={o.name}
+            className="w-full h-full object-cover"
+          />
+          {active && (
+            <div className="absolute inset-0 bg-primary/15 flex items-center justify-center">
+              <span className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                <Check
+                  className="w-3.5 h-3.5 text-primary-foreground"
+                  strokeWidth={2.5}
+                />
+              </span>
+            </div>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="font-serif text-[15px] leading-tight truncate">
+                {o.name}
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                {o.city} · {o.region}
+              </p>
+            </div>
+            <span
+              className={`shrink-0 text-[9px] tracking-[0.14em] uppercase px-2 py-1 rounded-sm border ${
+                stretch
+                  ? "border-border text-muted-foreground"
+                  : "border-primary/50 bg-primary/8 text-primary"
               }`}
             >
-              <div className="flex gap-3.5 p-3">
-                <div className="w-20 h-20 rounded-sm overflow-hidden shrink-0 bg-card relative">
-                  <img
-                    src={o.image}
-                    alt={o.name}
-                    className="w-full h-full object-cover"
-                  />
-                  {active && (
-                    <div className="absolute inset-0 bg-primary/15 flex items-center justify-center">
-                      <span className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                        <Check
-                          className="w-3.5 h-3.5 text-primary-foreground"
-                          strokeWidth={2.5}
-                        />
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="font-serif text-[15px] leading-tight truncate">
-                        {o.name}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        {o.city} · {o.region}
-                      </p>
-                    </div>
-                    {within ? (
-                      <span className="shrink-0 text-[9px] tracking-[0.14em] uppercase px-2 py-1 rounded-sm border border-primary/50 bg-primary/8 text-primary">
-                        Matches budget
-                      </span>
-                    ) : (
-                      <span className="shrink-0 text-[9px] tracking-[0.14em] uppercase px-2 py-1 rounded-sm border border-border text-muted-foreground">
-                        Stretch
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-2.5 grid grid-cols-3 gap-x-2">
-                    <MiniStat
-                      label="From"
-                      value={fmt.currency(o.fromPrice)}
-                    />
-                    <MiniStat
-                      label="Gross Yield"
-                      value={`${o.grossYield.toFixed(1)}%`}
-                    />
-                    <MiniStat
-                      label="5Y Growth"
-                      value={`${o.capitalGrowth5Y.toFixed(0)}%`}
-                      tone="primary"
-                    />
-                  </div>
-                </div>
-              </div>
-            </button>
-          );
-        })}
+              {stretch ? "Stretch" : match.fitLabel}
+            </span>
+          </div>
+          <div className="mt-2.5 grid grid-cols-3 gap-x-2">
+            <MiniStat label="From" value={fmt.currency(o.fromPrice)} />
+            <MiniStat
+              label="Cash req."
+              value={fmt.currency(match.cashRequired)}
+            />
+            <MiniStat
+              label="Gross Yield"
+              value={`${o.grossYield.toFixed(1)}%`}
+              tone="primary"
+            />
+          </div>
+          {stretch && match.stretchGap != null && (
+            <p className="text-[10px] text-muted-foreground mt-2 tabular-nums">
+              {fmt.currency(match.stretchGap)} above buying power
+            </p>
+          )}
+          <ul className="mt-2 space-y-0.5">
+            {match.reasons.slice(0, 2).map((r) => (
+              <li
+                key={r.code}
+                className="text-[10.5px] text-muted-foreground/90 leading-snug flex gap-1.5"
+              >
+                <span className="text-primary/80 shrink-0">·</span>
+                <span>{r.copy}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
+    </button>
+  );
+}
+
+function WhyThisFits({ reasons }: { reasons: FitReason[] }) {
+  if (reasons.length === 0) return null;
+  return (
+    <div className="mb-7 animate-fade-up">
+      <p className="label-eyebrow mb-2">Why this fits</p>
+      <ul className="space-y-2 rounded-sm border border-border bg-card/40 px-4 py-4">
+        {reasons.map((r) => (
+          <li
+            key={r.code}
+            className="text-[12.5px] text-foreground/85 leading-relaxed flex gap-2"
+          >
+            <Check
+              className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5"
+              strokeWidth={2}
+            />
+            <span>{r.copy}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -1519,6 +1601,7 @@ function WizardNav({
   canBack,
   canNext,
   deposit,
+  residencyRequired,
   onBack,
   onNext,
 }: {
@@ -1527,21 +1610,36 @@ function WizardNav({
   canBack: boolean;
   canNext: boolean;
   deposit: number;
+  residencyRequired: boolean;
   onBack: () => void;
   onNext: () => void;
 }) {
   // Hide on the final step — the FinalOutlook owns its own CTAs.
   if (step === total) return null;
 
+  // Options step: selection is via match cards — Back only.
+  if (step === 3) {
+    return (
+      <div className="border-t border-border pt-5 mb-5 mt-2 flex items-center gap-3 animate-fade-up">
+        <button
+          onClick={onBack}
+          className="tap press flex-1 py-3.5 rounded-sm border border-border text-[12px] tracking-[0.14em] uppercase text-muted-foreground active:text-foreground transition-colors"
+        >
+          Back
+        </button>
+      </div>
+    );
+  }
+
   // Continue button label and gate
   const labels: Record<number, string> = {
     1: "See My Buying Power",
-    2: "Match Properties",
-    3: "Skip · See Returns",
+    2: "Find My Matches",
     4: "View Long-Term Outlook",
   };
   const label = labels[step] ?? "Continue";
-  const disabled = step === 1 && deposit < 1000;
+  const disabled =
+    (step === 1 && deposit < 1000) || (step === 2 && residencyRequired);
 
   return (
     <div className="border-t border-border pt-5 mb-5 mt-2 flex items-center gap-3 animate-fade-up">
@@ -1677,7 +1775,7 @@ function FinalOutlook({
               value={`${ASSUMPTIONS.rentalGrowth.toFixed(1)}% / yr`}
             />
             <Assumption
-              label="Mortgage Rate"
+              label="Indicative Mortgage Rate"
               value={
                 isMortgage ? `${mortgageRate.toFixed(2)}%` : "Not applicable"
               }

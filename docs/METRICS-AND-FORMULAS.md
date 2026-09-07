@@ -61,10 +61,10 @@ Reference for all headline metrics shown in the prototype, how they are calculat
 | **Buying power** (cash purchase) | `deposit` | `deposit` |
 | **Loan amount** | `price × (LTV / 100)` | `price` (unit), `LTV` |
 | **Cash deposit (equity at purchase)** | `price − loanAmount` | `price`, `loanAmount` |
-| **Mortgage rate** | By nationality: UK vs Non-UK rate table | `nationality`, admin rates: `ukMortgageRate`, `nonUkMortgageRate` |
+| **Mortgage rate** | By residency band (indicative): GCC 5.40%, UK 4.50%, APAC 5.49%, Mainland Europe 5.49%, Africa 5.99% | `residency` → `getMortgageRate` in `lib/residencyRates.ts` |
 | **Annual mortgage (interest-only)** | `loanAmount × (mortgageRate / 100)` | `loanAmount`, `mortgageRate` |
 | **Annual mortgage (repayment)** | `(loan × r) / (1 − (1+r)^−n)` where `r = rate/100`, `n = 25` years | `loanAmount`, `mortgageRate`, term `n` (default 25) |
-| **SDLT (illustrative)** | `price × sdltRate` where UK = 3%, Non-UK = 5% | `price`, `nationality` (production: full SDLT band table) |
+| **SDLT (illustrative)** | `price × sdltRate` where UK residency = 3%, all other residencies = 5% | `price`, `residency` (production: full SDLT band table) |
 | **Legal fees** | Fixed illustrative: `£2,500` | Config / fee schedule |
 | **Initial cash required** | `cashDeposit + SDLT + legalFees` | All three components |
 | **Annual gross rent (calculator)** | `price × (grossYield / 100)` | Opportunity/unit: `fromPrice`, `grossYield` (%) |
@@ -75,7 +75,7 @@ Reference for all headline metrics shown in the prototype, how they are calculat
 | **Net annual income (year 1)** | `annualGrossRent − annualCosts` | Rent and costs as above |
 | **Net monthly income** | `netAnnualIncome / 12` | `netAnnualIncome` |
 | **Gross yield (calculator)** | `(annualGrossRent / price) × 100` | `annualGrossRent`, `price` |
-| **Default LTV by risk** | Cautious 55%, Balanced 65%, Growth 75% | Investor selection: `riskAppetite` |
+| **Default LTV** | Fixed default 65% (Investment Style ranks matches only; does not change LTV) | Investor input: `ltv` |
 
 ---
 
@@ -185,8 +185,9 @@ Used on Property Detail, Explore detail, and Calculator. Source: `lib/projection
 
 | Field | Type | Used for |
 |-------|------|----------|
-| `nationality` | UK / Non-UK | Mortgage rate, SDLT |
+| `residency` | GCC / UK / APAC / Mainland Europe / Africa | Indicative mortgage rate, SDLT |
 | `deposit` (calculator input) | GBP | Budget, affordability |
+| `investmentStyle` | Income Focused / Growth Focused / Balanced / Not Sure | Match ranking only |
 | Property links | IDs | Portfolio aggregation |
 
 ### Admin assumptions (rates table)
@@ -196,7 +197,7 @@ Used on Property Detail, Explore detail, and Calculator. Source: `lib/projection
 | `capitalGrowth` by city/property | % p.a. | Projections |
 | `rentalGrowth` | % p.a. | Projections |
 | `costGrowth` | % p.a. | Projections |
-| `ukMortgageRate` / `nonUkMortgageRate` | % | Calculator |
+| Indicative mortgage rates by residency | % | Calculator (`lib/residencyRates.ts`) |
 | `managementFeePctOfRent` | % | Calculator defaults |
 | `serviceChargePctOfValue` | % | Calculator defaults |
 | `grossYield` per opportunity | % | Explore, calculator rent |

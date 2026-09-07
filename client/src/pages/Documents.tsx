@@ -2,7 +2,8 @@
 // Design: Search-based, clean list, categories with counts + user upload
 import { AppShell } from "@/components/AppShell";
 import { ModalShell, SuccessState } from "@/components/ModalShell";
-import { documents as seedDocuments, Document } from "@/lib/data";
+import { Document } from "@/lib/data";
+import { getActiveDocuments } from "@/lib/holdings";
 import {
   Search,
   FileText,
@@ -35,7 +36,7 @@ function fileTypeFromName(name: string): Document["fileType"] {
 }
 
 export default function Documents() {
-  const [docs, setDocs] = useState<Document[]>(seedDocuments);
+  const [docs, setDocs] = useState<Document[]>(() => getActiveDocuments());
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<
     Document["category"] | "All"
