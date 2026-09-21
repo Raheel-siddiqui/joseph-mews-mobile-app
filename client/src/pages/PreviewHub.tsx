@@ -41,7 +41,7 @@ const JOURNEYS: Journey[] = [
   },
   {
     name: "Calculator",
-    description: "Matched opportunities (step 3)",
+    description: "Goal-led investment plan",
     loaded: "/calculator",
     empty: "/preview/calculator",
   },

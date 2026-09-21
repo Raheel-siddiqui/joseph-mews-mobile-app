@@ -340,7 +340,7 @@ function ProjectionChart({
             strokeWidth={1.5}
             fill="url(#projGold)"
             dot={false}
-            activeDot={{ r: 3, fill: "#C6A46C", stroke: "#0F0F0F", strokeWidth: 2 }}
+            activeDot={{ r: 3, fill: "#C6A46C", stroke: "#0A1220", strokeWidth: 2 }}
           />
           <Line
             type="monotone"
@@ -350,7 +350,7 @@ function ProjectionChart({
             strokeWidth={1.25}
             strokeDasharray="3 3"
             dot={false}
-            activeDot={{ r: 3, fill: "#C6A46C", stroke: "#0F0F0F", strokeWidth: 2 }}
+            activeDot={{ r: 3, fill: "#C6A46C", stroke: "#0A1220", strokeWidth: 2 }}
           />
         </ComposedChart>
       </ResponsiveContainer>
