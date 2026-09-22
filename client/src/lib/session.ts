@@ -18,8 +18,10 @@ export const prospect = {
   email: PROSPECT_EMAIL,
   memberSince: "—",
   tier: "Guest",
+  photo: undefined as string | undefined,
   advisor: investor.advisor,
   advisorTitle: investor.advisorTitle,
+  advisorPhoto: investor.advisorPhoto,
 };
 
 export const singleInvestor = {
@@ -28,8 +30,10 @@ export const singleInvestor = {
   email: SINGLE_EMAIL,
   memberSince: "March 2022",
   tier: "Silver",
+  photo: "/people/charlotte.jpg",
   advisor: investor.advisor,
   advisorTitle: investor.advisorTitle,
+  advisorPhoto: investor.advisorPhoto,
 };
 
 export type ActiveUser =

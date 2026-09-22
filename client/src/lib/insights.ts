@@ -12,6 +12,12 @@ import {
 
 export type InsightTone = "neutral" | "positive" | "watch";
 
+/** Optional supporting visual. UI renders by variant, never by insight id/category. */
+export type InsightVisual = {
+  variant: "distribution" | "compare";
+  items: { label: string; share: number; caption?: string }[];
+};
+
 export interface Insight {
   id: string;
   tone: InsightTone;
@@ -19,16 +25,18 @@ export interface Insight {
   headline: string;
   body: string;
   metric?: string;
+  context?: string;
+  visual?: InsightVisual;
 }
 
 const TARGET_GROSS_YIELD = 5.0;
-const HIGH_CONCENTRATION_PCT = 50;
+export const HIGH_CONCENTRATION_PCT = 50;
 
 function shortCity(city: string): string {
   return city.split(" ")[0];
 }
 
-function cityValueShare(
+export function cityValueShare(
   props: Property[],
   totalValue: number
 ): { city: string; pct: number; value: number }[] {
@@ -48,7 +56,7 @@ function cityValueShare(
   return entries.sort((a, b) => b.pct - a.pct);
 }
 
-function avgGrossYieldByCity(
+export function avgGrossYieldByCity(
   props: Property[]
 ): { city: string; avg: number; count: number }[] {
   const groups = new Map<string, Property[]>();
@@ -75,6 +83,18 @@ function concentrationInsight(
   const top = shares[0];
   if (!top || top.pct < HIGH_CONCENTRATION_PCT) return null;
 
+  const visual: InsightVisual | undefined =
+    shares.length > 0
+      ? {
+          variant: "distribution",
+          items: shares.map((s) => ({
+            label: s.city,
+            share: s.pct,
+            caption: `${Math.round(s.pct)}%`,
+          })),
+        }
+      : undefined;
+
   if (props.length === 1) {
     return {
       id: "concentration",
@@ -83,6 +103,7 @@ function concentrationInsight(
       headline: `Your entire portfolio sits in one ${top.city} property.`,
       body: `A second holding in another region would diversify market exposure.`,
       metric: `100%`,
+      visual,
     };
   }
 
@@ -95,6 +116,7 @@ function concentrationInsight(
     )}%).`,
     body: `Diversifying into a second region could reduce single-market exposure.`,
     metric: `${Math.round(top.pct)}%`,
+    visual,
   };
 }
 
@@ -113,6 +135,14 @@ function regionalYieldInsight(props: Property[]): Insight | null {
       2
     )}% in ${worst.city}.`,
     metric: `${best.avg.toFixed(2)}%`,
+    visual: {
+      variant: "compare",
+      items: ys.map((y) => ({
+        label: y.city,
+        share: y.avg,
+        caption: `${y.avg.toFixed(2)}%`,
+      })),
+    },
   };
 }
 

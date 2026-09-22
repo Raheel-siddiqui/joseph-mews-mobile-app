@@ -11,6 +11,7 @@ import {
   type TimeRange,
 } from "@/lib/data";
 import { ownsProperty } from "@/lib/holdings";
+import { propertyImageSrc } from "@/lib/propertyImage";
 import {
   progressPct,
   nextMortgagePayment,
@@ -23,13 +24,14 @@ import {
   Bath,
   Maximize2,
   ArrowUpRight,
+  ArrowDownRight,
   Calendar,
   User,
   TrendingUp,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import NotFound from "./NotFound";
-import { TimeRangeTabs } from "@/components/TimeRangeTabs";
+import { RangePills } from "@/components/dashboard/RangePills";
 import { TrendLine } from "@/components/TrendLine";
 import { ProjectionSection } from "@/components/ProjectionSection";
 
@@ -69,10 +71,11 @@ export default function PropertyDetail() {
 
   /* ----- Section tab navigation ----- */
   const sectionIds = useMemo(() => {
-    const base = ["overview"];
-    if (property.mortgagePlan) base.push("payments");
-    base.push("performance", "income", "projection");
-    return property.tenantName ? [...base, "tenancy"] : base;
+    const ids = ["overview"];
+    if (property.mortgagePlan) ids.push("payments");
+    ids.push("income", "performance", "projection");
+    if (property.tenantName) ids.push("tenancy");
+    return ids;
   }, [property.tenantName, property.mortgagePlan]);
   const [activeSection, setActiveSection] = useState<string>("overview");
   const tabsRef = useRef<HTMLDivElement | null>(null);
@@ -164,7 +167,7 @@ export default function PropertyDetail() {
         {/* Hero image — 16/9 reads better than 16/11 on phones */}
         <div className="aspect-[16/9] rounded-sm overflow-hidden bg-card mb-6 -mx-page sm:mx-0 animate-fade-up">
           <img
-            src={property.image}
+            src={propertyImageSrc(property)}
             alt={property.name}
             className="w-full h-full object-cover"
           />
@@ -203,26 +206,16 @@ export default function PropertyDetail() {
         {/* SECTION 1: VALUE OVERVIEW */}
         <div id="section-overview" />
         <Section>
-          <div className="mb-6">
-            <p className="label-eyebrow mb-3">Current Valuation</p>
-            <h2 className="font-serif num-hero leading-none tracking-tight tabular-nums mb-3">
-              {fmt.currency(property.currentValue)}
-            </h2>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="inline-flex items-center gap-1 text-primary tabular-nums">
-                <ArrowUpRight className="w-3.5 h-3.5" strokeWidth={1.75} />
-                {fmt.currency(property.capitalGrowth)}
-              </span>
-              <span className="text-muted-foreground">·</span>
-              <span className="text-muted-foreground tabular-nums">
-                {fmt.pct(property.capitalGrowthPct)}
-              </span>
-              <span className="text-muted-foreground">·</span>
-              <span className="text-muted-foreground">Since purchase</span>
-            </div>
-          </div>
+          <ValueCard
+            currentValue={property.currentValue}
+            rangeReturn={rangeReturn}
+            rangeLabel={timeRangeLabels[chartRange]}
+            series={filteredHistory}
+            range={chartRange}
+            onRangeChange={setChartRange}
+          />
 
-          <div className="grid grid-cols-2 gap-x-3 gap-y-5 pt-5 border-t border-border">
+          <div className="grid grid-cols-2 gap-x-3 gap-y-5 pt-6">
             <DataPoint
               label="Purchase Price"
               value={fmt.currency(property.purchasePrice)}
@@ -349,36 +342,7 @@ export default function PropertyDetail() {
 
         <Divider />
 
-        {/* SECTION 2: VALUE GROWTH CHART */}
-        <div id="section-performance" />
-        <Section title="Value Over Time">
-          <div className="flex items-baseline justify-between mb-5">
-            <div>
-              <p className="text-[10px] tracking-[0.16em] uppercase text-muted-foreground mb-1">
-                {timeRangeLabels[chartRange]}
-              </p>
-              <p className="font-serif text-xl tabular-nums text-primary">
-                <span className="inline-flex items-center gap-1">
-                  <ArrowUpRight className="w-3.5 h-3.5" strokeWidth={1.75} />
-                  {fmt.currency(rangeReturn.amount)}
-                </span>
-                <span className="text-muted-foreground text-sm font-sans ml-2">
-                  {fmt.pct(rangeReturn.pct)}
-                </span>
-              </p>
-            </div>
-            <TimeRangeTabs value={chartRange} onChange={setChartRange} />
-          </div>
-          <TrendLine data={filteredHistory} xKey="month" yKey="value" height={150} />
-          <div className="flex items-center justify-between mt-3 text-[10px] tracking-[0.14em] uppercase text-muted-foreground/60 tabular-nums">
-            <span>{filteredHistory[0]?.month}</span>
-            <span>{filteredHistory[filteredHistory.length - 1]?.month}</span>
-          </div>
-        </Section>
-
-        <Divider />
-
-        {/* SECTION 3: INCOME & COSTS */}
+        {/* SECTION 2: INCOME & COSTS */}
         <div id="section-income" />
         <Section title="Income & Costs">
           {isInBuild ? (
@@ -459,7 +423,8 @@ export default function PropertyDetail() {
 
         <Divider />
 
-        {/* SECTION 4: PERFORMANCE */}
+        {/* SECTION 3: PERFORMANCE */}
+        <div id="section-performance" />
         <Section title="Performance">
           <div className="space-y-7">
             <PerformanceRow
@@ -535,6 +500,64 @@ export default function PropertyDetail() {
         <div className="h-8" />
       </div>
     </AppShell>
+  );
+}
+
+function ValueCard({
+  currentValue,
+  rangeReturn,
+  rangeLabel,
+  series,
+  range,
+  onRangeChange,
+}: {
+  currentValue: number;
+  rangeReturn: { amount: number; pct: number };
+  rangeLabel: string;
+  series: { month: string; value: number; monthsAgo: number }[];
+  range: TimeRange;
+  onRangeChange: (v: TimeRange) => void;
+}) {
+  const positive = rangeReturn.amount >= 0;
+  const GrowthIcon = positive ? ArrowUpRight : ArrowDownRight;
+
+  return (
+    <div className="pd-value">
+      <p className="label-eyebrow pd-value__label">Current Valuation</p>
+      <h2 className="pd-value__amount">{fmt.currency(currentValue)}</h2>
+      <div className="pd-value__growth">
+        <p
+          className={`inline-flex items-center gap-2.5 ${
+            positive ? "text-positive" : "text-destructive"
+          }`}
+        >
+          <span className="inline-flex items-center gap-0.5">
+            <GrowthIcon className="w-3.5 h-3.5" strokeWidth={1.75} />
+            <span className="text-[14px] font-medium tabular-nums">
+              {fmt.currency(rangeReturn.amount)}
+            </span>
+          </span>
+          <span className="text-[14px] font-medium tabular-nums">
+            {fmt.pct(rangeReturn.pct)}
+          </span>
+        </p>
+        <p className="mt-1 text-[11px] text-muted-foreground/70">
+          {rangeLabel} · value change only
+        </p>
+      </div>
+      <p className="pd-value__chart-title">Value over time</p>
+      <TrendLine
+        data={series}
+        xKey="month"
+        yKey="value"
+        height={168}
+        animate={false}
+        hero
+      />
+      <div className="pd-value__pills">
+        <RangePills value={range} onChange={onRangeChange} />
+      </div>
+    </div>
   );
 }
 

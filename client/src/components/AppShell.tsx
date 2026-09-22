@@ -1,5 +1,5 @@
 // Joseph Mews — App Shell with phone-style frame and bottom navigation
-// Design: warm charcoal background, hairline dividers, champagne gold accents
+// Design: deep navy background, hairline dividers, champagne gold accents
 import { Link, useLocation } from "wouter";
 import {
   LayoutGrid,
@@ -45,8 +45,9 @@ export function AppShell({
   return (
     <div className="min-h-screen bg-background grain">
       <div className="phone-shell bg-background relative">
+        <div className="phone-wash" aria-hidden="true" />
         {showHeader && (
-          <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md pt-safe">
+          <header className="sticky top-0 z-40 bg-background/30 backdrop-blur-xl pt-safe">
             <div className="flex items-center justify-between page-px h-14">
               {backTo ? (
                 <Link
@@ -61,9 +62,11 @@ export function AppShell({
                   <img
                     src={LOGO_URL}
                     alt="Joseph Mews"
-                    className="w-8 h-8 rounded-[22%] shrink-0"
+                    className="app-header__logo"
                   />
-                  <span className="font-serif text-base tracking-tight">Joseph Mews</span>
+                  <span className="font-serif text-[15px] tracking-tight leading-none">
+                    Joseph Mews
+                  </span>
                 </Link>
               )}
               {title && (
@@ -72,82 +75,83 @@ export function AppShell({
               {!title && !backTo && (
                 <button
                   onClick={() => setProfileOpen(true)}
-                  className="tap w-11 h-11 -mr-2 rounded-full flex items-center justify-center active:opacity-70 transition-opacity"
+                  className="tap w-11 h-11 -mr-1 rounded-full flex items-center justify-center active:opacity-70 transition-opacity"
                   aria-label="Profile"
                 >
-                  <span className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-xs font-medium text-foreground/80">
-                    {userInitials(user)}
-                  </span>
+                  {user.photo ? (
+                    <img
+                      src={user.photo}
+                      alt=""
+                      className="app-header__photo"
+                    />
+                  ) : (
+                    <span className="app-header__avatar">
+                      {userInitials(user)}
+                    </span>
+                  )}
                 </button>
               )}
             </div>
-            <div className="hairline" />
           </header>
         )}
 
-        <main className={showNav ? "pb-32" : "pb-8"}>{children}</main>
+        <main className={showNav ? "pb-28" : "pb-8"}>{children}</main>
 
         {showNav && (
-          <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50">
-            <div className="hairline" />
-            <div className="bg-background/95 backdrop-blur-md">
-              <div className="flex items-stretch px-2 pt-2">
-                {investorMode ? (
-                  <>
-                    <NavItem
-                      href="/dashboard"
-                      label="Overview"
-                      icon={LayoutGrid}
-                      active={location === "/dashboard" || location === "/"}
-                    />
-                    <NavItem
-                      href="/portfolio"
-                      label="Portfolio"
-                      icon={Building2}
-                      active={
-                        location === "/portfolio" ||
-                        location.startsWith("/property")
-                      }
-                    />
-                    <NavItem
-                      href="/explore"
-                      label="Explore"
-                      icon={Compass}
-                      active={location.startsWith("/explore")}
-                    />
-                    <NavItem
-                      href="/calculator"
-                      label="Calc"
-                      icon={CalculatorIcon}
-                      active={location.startsWith("/calculator")}
-                    />
-                    <NavItem
-                      href="/documents"
-                      label="Docs"
-                      icon={FileText}
-                      active={location === "/documents"}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <NavItem
-                      href="/explore"
-                      label="Explore"
-                      icon={Compass}
-                      active={location.startsWith("/explore")}
-                    />
-                    <NavItem
-                      href="/calculator"
-                      label="Calc"
-                      icon={CalculatorIcon}
-                      active={location.startsWith("/calculator")}
-                    />
-                  </>
-                )}
-              </div>
-              <div className="pb-safe">
-                <div className="h-2" />
-              </div>
+          <nav className="app-tabbar" aria-label="Primary">
+            <div className="app-tabbar__bar">
+              {investorMode ? (
+                <>
+                  <NavItem
+                    href="/dashboard"
+                    label="Overview"
+                    icon={LayoutGrid}
+                    active={location === "/dashboard" || location === "/"}
+                  />
+                  <NavItem
+                    href="/portfolio"
+                    label="Portfolio"
+                    icon={Building2}
+                    active={
+                      location === "/portfolio" ||
+                      location.startsWith("/property")
+                    }
+                  />
+                  <NavItem
+                    href="/explore"
+                    label="Explore"
+                    icon={Compass}
+                    active={location.startsWith("/explore")}
+                  />
+                  <NavItem
+                    href="/calculator"
+                    label="Calc"
+                    icon={CalculatorIcon}
+                    active={location.startsWith("/calculator")}
+                  />
+                  <NavItem
+                    href="/documents"
+                    label="Docs"
+                    icon={FileText}
+                    active={location === "/documents"}
+                  />
+                </>
+              ) : (
+                <>
+                  <NavItem
+                    href="/explore"
+                    label="Explore"
+                    icon={Compass}
+                    active={location.startsWith("/explore")}
+                  />
+                  <NavItem
+                    href="/calculator"
+                    label="Calc"
+                    icon={CalculatorIcon}
+                    active={location.startsWith("/calculator")}
+                  />
+                </>
+              )}
             </div>
           </nav>
         )}
@@ -166,6 +170,13 @@ function ProfileSheet({ onClose }: { onClose: () => void }) {
 
   return (
     <ModalShell onClose={onClose} title="Your profile">
+      {user.photo && (
+        <img
+          src={user.photo}
+          alt=""
+          className="w-16 h-16 rounded-full object-cover mb-4"
+        />
+      )}
       <p className="text-[12.5px] text-muted-foreground leading-relaxed mb-6">
         {investorMode
           ? "Profile details are managed by your advisor. Contact them to request an update."
@@ -184,11 +195,24 @@ function ProfileSheet({ onClose }: { onClose: () => void }) {
 
       <div className="rounded-sm border border-border px-4 py-4 mb-6">
         <p className="label-eyebrow mb-2">Your Advisor</p>
-        <p className="font-serif text-lg leading-tight">{user.advisor}</p>
-        <p className="text-[12px] text-muted-foreground mt-0.5">
-          {user.advisorTitle}
-        </p>
-        <p className="text-[12px] text-muted-foreground mt-2">{advisorEmail()}</p>
+        <div className="flex items-center gap-3 mt-1">
+          {user.advisorPhoto && (
+            <img
+              src={user.advisorPhoto}
+              alt=""
+              className="w-11 h-11 rounded-full object-cover"
+            />
+          )}
+          <div className="min-w-0">
+            <p className="font-serif text-lg leading-tight">{user.advisor}</p>
+            <p className="text-[12px] text-muted-foreground mt-0.5">
+              {user.advisorTitle}
+            </p>
+            <p className="text-[12px] text-muted-foreground mt-2">
+              {advisorEmail()}
+            </p>
+          </div>
+        </div>
       </div>
 
       <button
@@ -238,7 +262,8 @@ function NavItem({
   return (
     <Link
       href={href}
-      className="tap flex-1 min-w-0 flex flex-col items-center justify-center gap-1 py-2.5 px-1 min-h-[3.25rem] active:opacity-70 transition-opacity"
+      className="app-tabbar__item tap"
+      aria-current={active ? "page" : undefined}
     >
       <Icon
         className={`w-[1.125rem] h-[1.125rem] transition-colors ${

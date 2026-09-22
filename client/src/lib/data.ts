@@ -48,8 +48,10 @@ export const investor = {
   email: "alexander.whitfield@example.com",
   memberSince: "March 2021",
   tier: "Gold",
+  photo: "/people/alexander.jpg",
   advisor: "Eleanor Hawthorne",
   advisorTitle: "Senior Investment Manager",
+  advisorPhoto: "/people/eleanor.jpg",
 };
 
 export const properties: Property[] = [

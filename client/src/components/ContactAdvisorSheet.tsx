@@ -75,10 +75,21 @@ export function ContactAdvisorSheet({
 
           <div className="rounded-sm border border-border px-4 py-4 mb-5">
             <p className="label-eyebrow mb-2">Your Advisor</p>
-            <p className="font-serif text-lg leading-tight">{user.advisor}</p>
-            <p className="text-[12px] text-muted-foreground mt-0.5">
-              {user.advisorTitle}
-            </p>
+            <div className="flex items-center gap-3 mt-1">
+              {user.advisorPhoto && (
+                <img
+                  src={user.advisorPhoto}
+                  alt=""
+                  className="w-12 h-12 rounded-full object-cover"
+                />
+              )}
+              <div className="min-w-0">
+                <p className="font-serif text-lg leading-tight">{user.advisor}</p>
+                <p className="text-[12px] text-muted-foreground mt-0.5">
+                  {user.advisorTitle}
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2.5">

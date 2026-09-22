@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { fmt } from "@/lib/data";
+import { propertyImageSrc } from "@/lib/propertyImage";
 import {
   getActivePortfolio,
   getActiveProperties,
@@ -48,7 +49,7 @@ export default function Portfolio() {
               {/* Image */}
               <div className="aspect-[16/10] rounded-sm overflow-hidden bg-card mb-4">
                 <img
-                  src={p.image}
+                  src={propertyImageSrc(p)}
                   alt={p.name}
                   className="w-full h-full object-cover"
                 />
