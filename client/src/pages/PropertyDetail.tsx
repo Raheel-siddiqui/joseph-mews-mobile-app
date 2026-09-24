@@ -1,7 +1,7 @@
 // Joseph Mews — Property Detail
 // Design: Sectioned breakdown — Overview, Financials (Income & Costs), Performance, Chart
 // Progressive disclosure with hairline dividers
-import { useRoute } from "wouter";
+import { Link, useRoute } from "wouter";
 import { AppShell } from "@/components/AppShell";
 import {
   getProperty,
@@ -11,11 +11,10 @@ import {
   type TimeRange,
 } from "@/lib/data";
 import { ownsProperty } from "@/lib/holdings";
-import { propertyImageSrc } from "@/lib/propertyImage";
+import { propertyGallery } from "@/lib/propertyImage";
+import { PhotoRail } from "@/components/PhotoRail";
 import {
-  progressPct,
   nextMortgagePayment,
-  remainingLabel,
   type MortgageInstallment,
   type MortgageInstallmentStatus,
 } from "@/lib/paymentPlan";
@@ -25,9 +24,7 @@ import {
   Maximize2,
   ArrowUpRight,
   ArrowDownRight,
-  Calendar,
-  User,
-  TrendingUp,
+  ChevronRight,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import NotFound from "./NotFound";
@@ -49,7 +46,13 @@ export default function PropertyDetail() {
   const equityPct = (property.equity / property.currentValue) * 100;
   const isInBuild = property.status === "In Build";
   const plan = property.mortgagePlan;
-  const planProgress = plan ? progressPct(plan) : 0;
+  const paidStages = plan
+    ? plan.schedule.filter((item) => item.status === "paid")
+    : [];
+  const paidToDate = paidStages.reduce((sum, item) => sum + item.amount, 0);
+  const planProgress = plan?.schedule.length
+    ? (paidStages.length / plan.schedule.length) * 100
+    : 0;
   const planNext = plan ? nextMortgagePayment(plan) : undefined;
 
   // Filter property's value history by selected range,
@@ -66,17 +69,23 @@ export default function PropertyDetail() {
     if (filteredHistory.length < 2) return { amount: 0, pct: 0 };
     const start = filteredHistory[0].value;
     const end = filteredHistory[filteredHistory.length - 1].value;
-    return { amount: end - start, pct: ((end - start) / start) * 100 };
-  }, [filteredHistory]);
+    const amount = end - start;
+    const pct =
+      amount === property.capitalGrowth
+        ? property.capitalGrowthPct
+        : start
+          ? (amount / start) * 100
+          : 0;
+    return { amount, pct };
+  }, [filteredHistory, property.capitalGrowth, property.capitalGrowthPct]);
 
   /* ----- Section tab navigation ----- */
   const sectionIds = useMemo(() => {
     const ids = ["overview"];
     if (property.mortgagePlan) ids.push("payments");
-    ids.push("income", "performance", "projection");
-    if (property.tenantName) ids.push("tenancy");
+    ids.push("performance", "income", "projection", "content");
     return ids;
-  }, [property.tenantName, property.mortgagePlan]);
+  }, [property.mortgagePlan]);
   const [activeSection, setActiveSection] = useState<string>("overview");
   const tabsRef = useRef<HTMLDivElement | null>(null);
 
@@ -87,135 +96,166 @@ export default function PropertyDetail() {
       .filter(Boolean) as HTMLElement[];
     if (elements.length === 0) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        // Pick the entry closest to the top of the viewport that is intersecting.
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (visible[0]) {
-          const id = visible[0].target.id.replace("section-", "");
-          setActiveSection(id);
-        }
-      },
-      {
-        // Header (~56px) + tab bar (~44px) ≈ 100px sticky offset.
-        rootMargin: "-110px 0px -55% 0px",
-        threshold: 0,
+    const markActive = () => {
+      const atEnd =
+        window.scrollY > 0 &&
+        window.innerHeight + window.scrollY >=
+          document.documentElement.scrollHeight - 8;
+      if (atEnd) {
+        const last = sectionIds[sectionIds.length - 1];
+        setActiveSection(last);
+        revealTab(last, "auto");
+        return;
       }
-    );
+      const line = 120;
+      let current = sectionIds[0];
+      for (const id of sectionIds) {
+        const el = document.getElementById(`section-${id}`);
+        if (el && el.getBoundingClientRect().top <= line) current = id;
+      }
+      setActiveSection(current);
+      revealTab(current, "auto");
+    };
+    const observer = new IntersectionObserver(markActive, {
+      rootMargin: "-110px 0px -40% 0px",
+      threshold: 0,
+    });
     elements.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
+    window.addEventListener("scroll", markActive, { passive: true });
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scroll", markActive);
+    };
   }, [sectionIds]);
 
   const scrollToSection = (id: string) => {
     const el = document.getElementById(`section-${id}`);
     if (!el) return;
-    const headerOffset = 108; // header + tab bar
+    const headerOffset = 104; // header + section rail
     const top = el.getBoundingClientRect().top + window.scrollY - headerOffset;
     window.scrollTo({ top, behavior: "smooth" });
     setActiveSection(id);
-    // Keep active tab visible inside the horizontal rail.
-    const tabBtn = tabsRef.current?.querySelector<HTMLButtonElement>(
+    revealTab(id, "smooth");
+  };
+
+  const revealTab = (id: string, behavior: ScrollBehavior) => {
+    const rail = tabsRef.current;
+    const tabBtn = rail?.querySelector<HTMLButtonElement>(
       `[data-tab-id="${id}"]`
     );
-    tabBtn?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    if (!rail || !tabBtn) return;
+    const pad = 16;
+    let target = rail.scrollLeft;
+    const left = tabBtn.offsetLeft - pad;
+    const right = tabBtn.offsetLeft + tabBtn.offsetWidth + pad;
+    if (left < target) target = left;
+    else if (right > target + rail.clientWidth) {
+      target = right - rail.clientWidth;
+    }
+
+    for (const btn of rail.querySelectorAll<HTMLButtonElement>("button")) {
+      if (btn === tabBtn) continue;
+      const edge = btn.offsetLeft + btn.offsetWidth;
+      const sliced = btn.offsetLeft < target + 2 && edge > target + 2;
+      if (sliced) target = Math.max(target, edge);
+    }
+
+    const activeRight = tabBtn.offsetLeft + tabBtn.offsetWidth + pad;
+    if (activeRight > target + rail.clientWidth) {
+      target = activeRight - rail.clientWidth;
+    }
+    target = Math.max(0, target);
+    if (Math.abs(target - rail.scrollLeft) < 2) return;
+    rail.scrollTo({ left: target, behavior });
   };
 
   const tabLabels: Record<string, string> = {
     overview: "Overview",
-    payments: "Mortgage",
+    payments: "Payment Plan",
     performance: "Performance",
     income: "Income",
     projection: "Projection",
-    tenancy: "Tenancy",
+    content: "Updates",
   };
 
   return (
     <AppShell backTo="/portfolio">
-      {/* Sticky section tabs — sit beneath the global header */}
-      <div className="sticky top-14 z-30 bg-background/95 backdrop-blur-md">
-        <div
-          ref={tabsRef}
-          className="flex items-center gap-1 overflow-x-auto scrollbar-hide page-px"
-        >
+      <nav className="section-nav" aria-label="Property sections">
+        <div ref={tabsRef} className="section-nav__rail">
           {sectionIds.map((id) => {
             const active = activeSection === id;
             return (
               <button
                 key={id}
+                type="button"
                 data-tab-id={id}
+                aria-current={active ? "location" : undefined}
                 onClick={() => scrollToSection(id)}
-                className={`tap press relative flex-shrink-0 px-3 py-3 text-[10px] tracking-[0.18em] uppercase transition-colors ${
-                  active
-                    ? "text-primary"
-                    : "text-muted-foreground active:text-foreground"
+                className={`tap section-nav__btn ${
+                  active ? "section-nav__btn--on" : ""
                 }`}
               >
                 {tabLabels[id]}
-                {active && (
-                  <span className="absolute left-3 right-3 bottom-0 h-px bg-primary" />
-                )}
               </button>
             );
           })}
         </div>
-        <div className="hairline" />
-      </div>
+      </nav>
 
       <div className="page-px">
-        {/* Hero image — 16/9 reads better than 16/11 on phones */}
-        <div className="aspect-[16/9] rounded-sm overflow-hidden bg-card mb-6 -mx-page sm:mx-0 animate-fade-up">
-          <img
-            src={propertyImageSrc(property)}
-            alt={property.name}
-            className="w-full h-full object-cover"
-          />
-        </div>
-
-        {/* Title block */}
-        <div className="mb-7 animate-fade-up" style={{ animationDelay: "60ms" }}>
-          <div className="flex items-center justify-between gap-3 mb-3">
-            <p className="label-eyebrow truncate">{property.reference}</p>
-            <StatusPill status={property.status} />
-          </div>
-          <h1 className="font-serif text-2xl leading-tight mb-2">
-            {property.name}
-          </h1>
-          <p className="text-[13px] text-muted-foreground">
-            {property.location} · {property.city}
-          </p>
-
-          {/* Specs row */}
-          <div className="flex items-center gap-5 mt-5 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <Bed className="w-3.5 h-3.5" strokeWidth={1.5} />
-              {property.bedrooms} bed
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Bath className="w-3.5 h-3.5" strokeWidth={1.5} />
-              {property.bathrooms} bath
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Maximize2 className="w-3.5 h-3.5" strokeWidth={1.5} />
-              {property.sqft} sq ft
-            </span>
-          </div>
-        </div>
-
-        {/* SECTION 1: VALUE OVERVIEW */}
         <div id="section-overview" />
+        <div className="mt-3 mb-4 animate-fade-up">
+          <PhotoRail
+            images={propertyGallery(property)}
+            label={property.name}
+            status={
+              property.status === "Available" ? (
+                <StatusPill status={property.status} />
+              ) : undefined
+            }
+          />
+          <div className="mt-3">
+            <p className="label-eyebrow">{property.reference}</p>
+            <h1 className="page-intro__title">{property.name}</h1>
+            <p className="page-intro__sub">
+              {[property.location, property.city].filter(Boolean).join(" · ")}
+            </p>
+          </div>
+        </div>
+
+        <div
+          className="glass glass--pad mb-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground animate-fade-up"
+          style={{ animationDelay: "60ms" }}
+        >
+          <span className="flex items-center gap-1.5">
+            <Bed className="w-3.5 h-3.5" strokeWidth={1.5} />
+            {property.bedrooms} bed
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Bath className="w-3.5 h-3.5" strokeWidth={1.5} />
+            {property.bathrooms} bath
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Maximize2 className="w-3.5 h-3.5" strokeWidth={1.5} />
+            {property.sqft} sq ft
+          </span>
+        </div>
+
         <Section>
           <ValueCard
             currentValue={property.currentValue}
-            rangeReturn={rangeReturn}
-            rangeLabel={timeRangeLabels[chartRange]}
+            rangeReturn={{
+              amount: property.capitalGrowth,
+              pct: property.capitalGrowthPct,
+            }}
+            rangeLabel="Since purchase"
             series={filteredHistory}
             range={chartRange}
             onRangeChange={setChartRange}
+            showChart={false}
           />
 
-          <div className="grid grid-cols-2 gap-x-3 gap-y-5 pt-6">
+          <div className="glass stat-grid mt-4">
             <DataPoint
               label="Purchase Price"
               value={fmt.currency(property.purchasePrice)}
@@ -224,17 +264,16 @@ export default function PropertyDetail() {
             <DataPoint
               label="Current Value"
               value={fmt.currency(property.currentValue)}
-              sub="As of May 2026"
             />
             <DataPoint
               label="Equity Position"
               value={fmt.currency(property.equity)}
-              sub={`${equityPct.toFixed(0)}% of value`}
+              sub={`${equityPct.toFixed(2)}% of value`}
             />
             <DataPoint
-              label="Outstanding Loan"
+              label="Remaining to pay"
               value={fmt.currency(property.loanBalance)}
-              sub={`${(100 - equityPct).toFixed(0)}% LTV`}
+              sub={purchaseShare(property.loanBalance, property.purchasePrice)}
             />
           </div>
         </Section>
@@ -244,38 +283,32 @@ export default function PropertyDetail() {
             <Divider />
 
             <div id="section-payments" />
-            <Section title="Mortgage Plan">
-              <p className="text-[12px] text-muted-foreground mb-6">
-                {plan.lender} · {plan.type} · {plan.rate.toFixed(2)}%
-              </p>
+            <Section title="Payment Plan">
+              {plan.lender.startsWith("Developer") && (
+                <p className="text-[12px] text-muted-foreground mb-6">
+                  {plan.lender}
+                </p>
+              )}
 
-              <div className="grid grid-cols-2 gap-x-3 gap-y-5 mb-5">
+              <div className="glass stat-grid mb-5">
                 <DataPoint
-                  label="Monthly"
-                  value={fmt.currency(plan.monthlyPayment)}
+                  label="Purchase Price"
+                  value={fmt.currency(property.purchasePrice)}
                 />
+                <DataPoint label="Paid to date" value={fmt.currency(paidToDate)} />
                 <DataPoint
-                  label="Outstanding"
+                  label="Remaining"
                   value={fmt.currency(plan.outstandingBalance)}
                 />
                 <DataPoint
-                  label="Term"
-                  value={`${plan.termYears} years`}
-                  sub={remainingLabel(plan)}
-                />
-                <DataPoint
-                  label="Original loan"
-                  value={fmt.currency(plan.originalLoan)}
+                  label="Stages"
+                  value={`${paidStages.length} of ${plan.schedule.length} paid`}
                 />
               </div>
 
               <div className="mb-7">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="label-eyebrow">
-                    {plan.type === "Repayment"
-                      ? "Principal repaid"
-                      : "Term elapsed"}
-                  </p>
+                  <p className="label-eyebrow">Paid to date</p>
                   <p className="text-[11px] tabular-nums text-muted-foreground">
                     {planProgress.toFixed(0)}%
                   </p>
@@ -289,7 +322,7 @@ export default function PropertyDetail() {
               </div>
 
               {planNext && (
-                <div className="bg-card/50 px-5 py-5 rounded-sm border border-primary/35 mb-7">
+                <div className="glass-gold glass--pad mb-7">
                   <p className="label-eyebrow mb-2 text-primary">Next payment</p>
                   <p className="font-serif text-2xl tabular-nums leading-none mb-2">
                     {fmt.currency(planNext.amount)}
@@ -318,9 +351,7 @@ export default function PropertyDetail() {
                       : plan.schedule.filter(
                           (i) => i.status === scheduleFilter
                         )
-                  )
-                    .slice()
-                    .reverse();
+                  ).slice();
                   if (rows.length === 0) {
                     return (
                       <p className="text-sm text-muted-foreground py-2">
@@ -328,12 +359,15 @@ export default function PropertyDetail() {
                       </p>
                     );
                   }
-                  return rows.map((inst, i) => (
-                    <div key={inst.id}>
-                      {i > 0 && <div className="hairline my-4" />}
-                      <MortgageInstallmentRow installment={inst} />
+                  return (
+                    <div className="glass-list">
+                      {rows.map((inst) => (
+                        <div key={inst.id} className="py-3.5">
+                          <MortgageInstallmentRow installment={inst} />
+                        </div>
+                      ))}
                     </div>
-                  ));
+                  );
                 })()}
               </div>
             </Section>
@@ -342,11 +376,27 @@ export default function PropertyDetail() {
 
         <Divider />
 
+        <div id="section-performance" />
+        <Section title="Value over time">
+          <ValueCard
+            currentValue={property.currentValue}
+            rangeReturn={rangeReturn}
+            rangeLabel={timeRangeLabels[chartRange]}
+            series={filteredHistory}
+            range={chartRange}
+            onRangeChange={setChartRange}
+            showChart
+            chartOnly
+          />
+        </Section>
+
+        <Divider />
+
         {/* SECTION 2: INCOME & COSTS */}
         <div id="section-income" />
         <Section title="Income & Costs">
           {isInBuild ? (
-            <div className="py-8 text-center border border-dashed border-border rounded-sm">
+            <div className="glass glass--pad py-8 text-center">
               <p className="label-eyebrow mb-3">Property In Build</p>
               <p className="text-sm text-muted-foreground mb-2">
                 Income generation begins post-completion
@@ -358,7 +408,7 @@ export default function PropertyDetail() {
           ) : (
             <>
               {/* Income */}
-              <div className="mb-8">
+              <div className="glass-gold glass--pad mb-4">
                 <div className="flex items-baseline justify-between mb-1">
                   <p className="text-sm font-medium">Monthly Rental Income</p>
                   <p className="font-serif text-2xl tabular-nums text-primary">
@@ -367,48 +417,35 @@ export default function PropertyDetail() {
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Expected · {fmt.currency(property.expectedRent)}
-                  {property.monthlyRent > property.expectedRent && (
-                    <span className="text-primary ml-2">
-                      +{fmt.currency(property.monthlyRent - property.expectedRent)} above
-                    </span>
-                  )}
                 </p>
               </div>
 
-              <div className="hairline mb-8" />
-
-              {/* Costs breakdown */}
-              <div className="space-y-5 mb-8">
-                <p className="label-eyebrow">Monthly Costs</p>
-                <CostRow
-                  label="Service Charge"
-                  value={fmt.currency(property.monthlyServiceCharge)}
-                />
-                <CostRow
-                  label="Management Fee"
-                  value={fmt.currency(property.monthlyManagementFee)}
-                />
-                <CostRow
-                  label="Mortgage Payment"
-                  value={fmt.currency(property.monthlyMortgage)}
-                />
-                <div className="hairline" />
-                <div className="flex items-center justify-between pt-1">
+              <p className="label-eyebrow mb-3">Monthly Costs</p>
+              <div className="glass-list mb-4">
+                <div className="py-3.5">
+                  <CostRow
+                    label="Service Charge"
+                    value={fmt.currency(property.monthlyServiceCharge)}
+                  />
+                </div>
+                <div className="py-3.5">
+                  <CostRow
+                    label="Management Fee"
+                    value={fmt.currency(property.monthlyManagementFee)}
+                  />
+                </div>
+                <div className="py-3.5 flex items-center justify-between">
                   <p className="text-sm text-muted-foreground">Total Costs</p>
                   <p className="font-serif text-lg tabular-nums">
                     {fmt.currency(
                       property.monthlyServiceCharge +
-                        property.monthlyManagementFee +
-                        property.monthlyMortgage
+                        property.monthlyManagementFee
                     )}
                   </p>
                 </div>
               </div>
 
-              <div className="hairline-gold mb-8" />
-
-              {/* Net income */}
-              <div className="bg-card/50 px-5 py-5 rounded-sm border border-border">
+              <div className="glass glass--pad">
                 <p className="label-eyebrow mb-2">Net Monthly Income</p>
                 <p className="font-serif num-display tabular-nums leading-none mb-1">
                   {fmt.currency(property.netMonthlyIncome)}
@@ -423,28 +460,31 @@ export default function PropertyDetail() {
 
         <Divider />
 
-        {/* SECTION 3: PERFORMANCE */}
-        <div id="section-performance" />
+        <div id="section-returns" />
         <Section title="Performance">
-          <div className="space-y-7">
-            <PerformanceRow
-              label="Capital Growth"
-              sublabel="Since purchase"
-              value={fmt.pct(property.capitalGrowthPct)}
-              tone="positive"
-            />
-            <div className="hairline" />
-            <PerformanceRow
-              label="Gross Yield"
-              sublabel={isInBuild ? "Not yet available" : "Actual · Annual rent ÷ value"}
-              value={isInBuild ? "—" : fmt.pctPlain(property.grossYield)}
-            />
-            <div className="hairline" />
-            <PerformanceRow
-              label="Occupancy"
-              sublabel="Last 12 months"
-              value={`${property.occupancy}%`}
-            />
+          <div className="glass-list">
+            <div className="py-3.5">
+              <PerformanceRow
+                label="Capital Growth"
+                sublabel="Since purchase"
+                value={`${property.capitalGrowthPct >= 0 ? "+" : ""}${property.capitalGrowthPct.toFixed(2)}%`}
+                tone="positive"
+              />
+            </div>
+            <div className="py-3.5">
+              <PerformanceRow
+                label="Gross Yield"
+                sublabel={isInBuild ? "Not yet available" : "Annualised · before costs"}
+                value={isInBuild ? "—" : fmt.pctPlain(property.grossYield)}
+              />
+            </div>
+            <div className="py-3.5">
+              <PerformanceRow
+                label="Occupancy"
+                sublabel="Last 12 months"
+                value={`${property.occupancy}%`}
+              />
+            </div>
           </div>
         </Section>
 
@@ -456,51 +496,54 @@ export default function PropertyDetail() {
           title="Projection"
           input={{
             startValue: property.currentValue,
-            annualGrowth: 4.5,
+            annualGrowth: property.id === "JM-PENNY" ? 4 : 4.5,
             annualGrossRent: property.monthlyRent * 12 || property.expectedRent * 12,
-            rentalGrowth: 3.0,
+            rentalGrowth: property.id === "JM-PENNY" ? 0 : 3.0,
             annualServiceCharge: property.monthlyServiceCharge * 12,
             annualManagementFee: property.monthlyManagementFee * 12,
             annualMortgage: property.monthlyMortgage * 12,
-            costGrowth: 2.5,
+            costGrowth: property.id === "JM-PENNY" ? 0 : 2.5,
           }}
-          hasMortgage={property.monthlyMortgage > 0}
-          mortgageRate={5.25}
+          hasMortgage={property.id === "JM-PENNY" || property.monthlyMortgage > 0}
+          mortgageRate={property.id === "JM-PENNY" ? 2.9 : 5.25}
         />
 
-        {/* Tenant info */}
-        {property.tenantName && (
-          <>
-            <Divider />
-            <div id="section-tenancy" />
-            <Section title="Current Tenant">
-              <div className="space-y-4">
-                <InfoRow
-                  icon={User}
-                  label="Tenant"
-                  value={property.tenantName}
-                />
-                {property.tenancyEnd && (
-                  <InfoRow
-                    icon={Calendar}
-                    label="Tenancy ends"
-                    value={property.tenancyEnd}
-                  />
-                )}
-                <InfoRow
-                  icon={TrendingUp}
-                  label="Occupancy"
-                  value={`${property.occupancy}% over 12 months`}
-                />
-              </div>
-            </Section>
-          </>
-        )}
+        <Divider />
+        <div id="section-content" />
+        <Section title="Updates">
+          <Link
+            href={`/property/${property.id}/content`}
+            className="glass glass--pad flex items-center gap-3"
+          >
+            <img
+              src={propertyGallery(property)[0]}
+              alt=""
+              className="h-14 w-14 shrink-0 rounded-md object-cover"
+            />
+            <span className="min-w-0 flex-1">
+              <span className="block font-serif text-lg leading-tight">
+                {property.name}
+              </span>
+              {property.id === "JM-PENNY" && (
+                <span className="mt-1 block text-[12px] text-muted-foreground">
+                  15 Sep 2026
+                </span>
+              )}
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+          </Link>
+        </Section>
 
         <div className="h-8" />
       </div>
     </AppShell>
   );
+}
+
+function purchaseShare(balance: number, purchase: number) {
+  if (!purchase) return undefined;
+  const pct = Math.floor((balance / purchase) * 10000) / 100;
+  return `${pct.toFixed(2)}% of purchase`;
 }
 
 function ValueCard({
@@ -510,6 +553,8 @@ function ValueCard({
   series,
   range,
   onRangeChange,
+  showChart = true,
+  chartOnly = false,
 }: {
   currentValue: number;
   rangeReturn: { amount: number; pct: number };
@@ -517,14 +562,20 @@ function ValueCard({
   series: { month: string; value: number; monthsAgo: number }[];
   range: TimeRange;
   onRangeChange: (v: TimeRange) => void;
+  showChart?: boolean;
+  chartOnly?: boolean;
 }) {
   const positive = rangeReturn.amount >= 0;
   const GrowthIcon = positive ? ArrowUpRight : ArrowDownRight;
 
   return (
     <div className="pd-value">
-      <p className="label-eyebrow pd-value__label">Current Valuation</p>
-      <h2 className="pd-value__amount">{fmt.currency(currentValue)}</h2>
+      {!chartOnly && (
+        <>
+          <p className="label-eyebrow pd-value__label">Current Valuation</p>
+          <h2 className="pd-value__amount">{fmt.currency(currentValue)}</h2>
+        </>
+      )}
       <div className="pd-value__growth">
         <p
           className={`inline-flex items-center gap-2.5 ${
@@ -538,25 +589,29 @@ function ValueCard({
             </span>
           </span>
           <span className="text-[14px] font-medium tabular-nums">
-            {fmt.pct(rangeReturn.pct)}
+            {rangeReturn.pct >= 0 ? "+" : ""}
+            {rangeReturn.pct.toFixed(2)}%
           </span>
         </p>
         <p className="mt-1 text-[11px] text-muted-foreground/70">
-          {rangeLabel} · value change only
+          {rangeLabel}
         </p>
       </div>
-      <p className="pd-value__chart-title">Value over time</p>
-      <TrendLine
-        data={series}
-        xKey="month"
-        yKey="value"
-        height={168}
-        animate={false}
-        hero
-      />
-      <div className="pd-value__pills">
-        <RangePills value={range} onChange={onRangeChange} />
-      </div>
+      {showChart && (
+        <>
+          <TrendLine
+            data={series}
+            xKey="month"
+            yKey="value"
+            height={168}
+            animate={false}
+            hero
+          />
+          <div className="pd-value__pills">
+            <RangePills value={range} onChange={onRangeChange} />
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -569,21 +624,15 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="py-7 animate-fade-up">
-      {title && (
-        <div className="flex items-baseline justify-between mb-6">
-          <div>
-            <h3 className="font-serif text-xl tracking-tight">{title}</h3>
-          </div>
-        </div>
-      )}
+    <section className="mb-10 animate-fade-up">
+      {title && <h3 className="section-kicker">{title}</h3>}
       {children}
     </section>
   );
 }
 
 function Divider() {
-  return <div className="hairline" />;
+  return null;
 }
 
 function DataPoint({
@@ -636,7 +685,7 @@ function ScheduleFilterTabs({
   onChange: (v: ScheduleFilter) => void;
 }) {
   return (
-    <div className="inline-flex items-center gap-0.5 border border-border rounded-sm p-0.5 bg-card/40 max-w-full overflow-x-auto scrollbar-hide">
+    <div className="seg max-w-full">
       {SCHEDULE_FILTERS.map((r) => {
         const active = r.value === value;
         return (
@@ -644,11 +693,7 @@ function ScheduleFilterTabs({
             key={r.value}
             type="button"
             onClick={() => onChange(r.value)}
-            className={`px-2.5 py-2 text-[10px] tracking-[0.14em] uppercase rounded-[2px] transition-all tap shrink-0 ${
-              active
-                ? "bg-primary/15 text-primary"
-                : "text-muted-foreground active:text-foreground"
-            }`}
+            className={`tap seg__btn ${active ? "seg__btn--on" : ""}`}
           >
             {r.label}
           </button>
@@ -727,44 +772,14 @@ function PerformanceRow({
 }
 
 function StatusPill({ status }: { status: string }) {
-  const styles = {
-    Tenanted: "border-primary/40 text-primary",
-    "In Build": "border-amber-500/40 text-amber-500/90",
-    Vacant: "border-muted-foreground/40 text-muted-foreground",
-    Refurbishment: "border-amber-500/40 text-amber-500/90",
-  }[status] || "border-muted-foreground/40 text-muted-foreground";
+  const tone =
+    status === "Tenanted" || status === "Available"
+      ? "chip chip--gold chip--on-photo"
+      : status === "In Build" || status === "Refurbishment"
+        ? "chip chip--warn chip--on-photo"
+        : "chip chip--muted chip--on-photo";
 
-  return (
-    <span
-      className={`text-[10px] tracking-[0.18em] uppercase px-2.5 py-1 border rounded-sm ${styles}`}
-    >
-      {status}
-    </span>
-  );
-}
-
-function InfoRow({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex items-center gap-4">
-      <div className="w-10 h-10 rounded-full border border-border flex items-center justify-center flex-shrink-0">
-        <Icon className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
-      </div>
-      <div className="flex-1">
-        <p className="text-[10px] tracking-[0.14em] uppercase text-muted-foreground mb-0.5">
-          {label}
-        </p>
-        <p className="text-sm">{value}</p>
-      </div>
-    </div>
-  );
+  return <span className={tone}>{status}</span>;
 }
 
 

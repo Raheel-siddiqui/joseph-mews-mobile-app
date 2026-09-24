@@ -57,7 +57,9 @@ export function HoldingsRail({
             />
             <div className="dash-hold__shade" />
             <div className="dash-hold__meta">
-              <p className="dash-hold__status">{p.status}</p>
+              {p.status === "Available" && (
+                <p className="dash-hold__status">{p.status}</p>
+              )}
               <p className="dash-hold__loc">{p.location}</p>
               <h3 className="dash-hold__name">{p.name}</h3>
               <p className="dash-hold__figs">

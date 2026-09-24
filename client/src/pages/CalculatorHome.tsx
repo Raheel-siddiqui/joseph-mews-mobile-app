@@ -11,6 +11,7 @@ import {
 } from "@/lib/calculatorMatching";
 import { fmt } from "@/lib/data";
 import { opportunities } from "@/lib/explore";
+import { opportunityImageSrc } from "@/lib/propertyImage";
 import { getActiveProperties } from "@/lib/holdings";
 import {
   JOURNEY_PHASES,
@@ -456,7 +457,7 @@ export default function CalculatorHome() {
               screenId !== "projection" &&
               `Question ${questionNumber} of ${questionScreens.length} · ${copy.caption}`}
           </p>
-          <h1 className="font-serif text-[26px] sm:text-[28px] leading-tight mb-3">
+          <h1 className="page-intro__title mb-3">
             {screenId === "plan" && "Your Investment Plan"}
             {screenId === "returns" && `${opp.name}`}
             {screenId === "projection" &&
@@ -592,7 +593,7 @@ export default function CalculatorHome() {
             <div className="mb-9">
               <button
                 onClick={() => setFiltersOpen((o) => !o)}
-                className="tap press w-full flex items-center justify-between py-3 border-t border-b border-border text-[10px] tracking-[0.18em] uppercase text-muted-foreground active:text-foreground transition-colors"
+                className="btn-quiet w-full justify-between"
                 aria-expanded={filtersOpen}
               >
                 <span>Optional filters</span>
@@ -672,7 +673,7 @@ export default function CalculatorHome() {
             />
 
             {contribution && contribution.kind !== "none" && (
-              <div className="mb-7 rounded-sm border border-primary/40 bg-primary/[0.04] px-4 py-4">
+              <div className="glass-gold glass--pad mb-7">
                 <p className="label-eyebrow !text-primary/85 mb-2">
                   Progress towards the goal
                 </p>
@@ -703,7 +704,7 @@ export default function CalculatorHome() {
               <h2 className="font-serif text-xl tracking-tight mb-6">
                 Detailed results
               </h2>
-              <div className="px-5 py-6 rounded-sm border border-border bg-card/40 mb-6">
+              <div className="glass-gold glass--pad mb-6">
                 <p className="label-eyebrow mb-3">Total Return · {holding}Y</p>
                 <p className="font-serif num-display tabular-nums leading-none text-primary mb-2">
                   {fmt.currency(result.totalReturn)}
@@ -846,16 +847,10 @@ function ChoiceGroup({
             role="radio"
             aria-checked={active}
             onClick={() => onSelect(o.value)}
-            className={`tap text-left rounded-sm border min-h-[56px] transition-[border-color,background-color,opacity] duration-300 ${
-              layout === "chips"
-                ? "px-4 py-3 flex-1 min-w-[30%]"
-                : "w-full px-4 py-4"
+            className={`tap choice ${
+              layout === "chips" ? "flex-1 min-w-[30%] !py-3" : "w-full"
             } ${
-              active
-                ? "border-primary text-primary bg-primary/10"
-                : highlight
-                  ? "border-primary/40 text-foreground bg-primary/[0.04]"
-                  : "border-border text-foreground/90"
+              active ? "choice--on" : highlight ? "choice--soft" : ""
             } ${isConfirming ? "choice-confirm" : ""} ${
               confirming && !isConfirming ? "opacity-45" : "opacity-100"
             }`}
@@ -951,7 +946,7 @@ function PlanSummary({
 }) {
   return (
     <div className="mb-7">
-      <div className="rounded-sm border border-primary/40 bg-primary/[0.04] px-5 py-6 mb-4">
+      <div className="glass-gold glass--pad mb-4">
         <p className="label-eyebrow !text-primary/85 mb-2">Your goal</p>
         <p className="font-serif text-lg leading-snug mb-4">{goal}</p>
         <div className="grid grid-cols-1 gap-4 pt-4 border-t border-primary/15">
@@ -1076,7 +1071,7 @@ function AdjustAssumptions({
     <div className="mb-7">
       <button
         onClick={() => setOpen((s) => !s)}
-        className="tap press w-full flex items-center justify-between py-3 border-t border-b border-border text-[10px] tracking-[0.18em] uppercase text-muted-foreground active:text-foreground transition-colors"
+        className="btn-quiet w-full justify-between"
         aria-expanded={open}
       >
         <span>Adjust assumptions</span>
@@ -1103,10 +1098,8 @@ function AdjustAssumptions({
                       <button
                         key={r}
                         onClick={() => setResidency(r)}
-                        className={`tap press py-3 rounded-sm border text-[11px] uppercase tracking-[0.12em] transition-colors ${
-                          active
-                            ? "border-primary text-primary bg-primary/10"
-                            : "border-border text-muted-foreground"
+                        className={`tap press choice !min-h-0 !py-3 text-[11px] uppercase tracking-[0.12em] ${
+                          active ? "choice--on" : ""
                         }`}
                       >
                         {r}
@@ -1134,10 +1127,8 @@ function AdjustAssumptions({
                         key={preset}
                         type="button"
                         onClick={() => setLtv(preset)}
-                        className={`tap press min-h-[48px] rounded-sm border text-[13px] tabular-nums transition-colors ${
-                          active
-                            ? "border-primary text-primary bg-primary/10"
-                            : "border-border text-muted-foreground"
+                        className={`tap press choice !min-h-[48px] text-[13px] tabular-nums ${
+                          active ? "choice--on" : ""
                         }`}
                       >
                         {preset}%
@@ -1179,10 +1170,8 @@ function AdjustAssumptions({
                       <button
                         key={t}
                         onClick={() => setMortgageType(t)}
-                        className={`tap press py-3 rounded-sm border text-[11px] uppercase tracking-[0.12em] transition-colors ${
-                          active
-                            ? "border-primary text-primary bg-primary/10"
-                            : "border-border text-muted-foreground"
+                        className={`tap press choice !min-h-0 !py-3 text-[11px] uppercase tracking-[0.12em] ${
+                          active ? "choice--on" : ""
                         }`}
                       >
                         {t}
@@ -1247,7 +1236,7 @@ function MatchedOpportunities({
       </div>
 
       {exact.length === 0 ? (
-        <div className="rounded-sm border border-border bg-card/40 px-5 py-6 mb-4">
+        <div className="glass glass--pad mb-4">
           <p className="font-serif text-base mb-2">Funding gap</p>
           <p className="text-[12.5px] text-muted-foreground leading-relaxed mb-5">
             No exact matches at your current buying power. Change capital or
@@ -1257,19 +1246,19 @@ function MatchedOpportunities({
           <div className="flex flex-col gap-2.5">
             <button
               onClick={onEditCapital}
-              className="tap press w-full py-3.5 rounded-sm bg-primary text-primary-foreground text-[12px] tracking-[0.1em] uppercase font-medium active:opacity-90"
+              className="tap press btn-gold"
             >
               Change capital
             </button>
             <button
               onClick={onEditFinance}
-              className="tap press w-full py-3.5 rounded-sm border border-border text-[12px] tracking-[0.1em] uppercase text-muted-foreground active:text-foreground"
+              className="tap press pill w-full"
             >
               Change finance
             </button>
             <button
               onClick={onSpeakToAdvisor}
-              className="tap press w-full py-3.5 rounded-sm border border-border text-[12px] tracking-[0.1em] uppercase text-muted-foreground active:text-foreground"
+              className="tap press pill w-full"
             >
               Speak to Advisor
             </button>
@@ -1334,15 +1323,13 @@ function MatchCard({
   return (
     <button
       onClick={onSelect}
-      className={`tap w-full text-left rounded-sm border overflow-hidden min-h-[88px] transition-[border-color,background-color,opacity] duration-300 ${
-        active
-          ? "border-primary bg-primary/[0.05]"
-          : "border-border"
+      className={`tap glass w-full text-left overflow-hidden min-h-[88px] ${
+        active ? "choice--on" : ""
       } ${confirming ? "choice-confirm" : ""}`}
     >
       <div className="flex gap-3.5 p-3">
-        <div className="w-20 h-20 rounded-sm overflow-hidden shrink-0 bg-card relative">
-          <img src={o.image} alt={o.name} className="w-full h-full object-cover" />
+        <div className="w-20 h-20 rounded-[0.85rem] overflow-hidden shrink-0 bg-card relative">
+          <img src={opportunityImageSrc(o)} alt={o.name} className="w-full h-full object-cover" />
           {active && (
             <div className="absolute inset-0 bg-primary/15 flex items-center justify-center">
               <span className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
@@ -1368,10 +1355,8 @@ function MatchCard({
               </p>
             </div>
             <span
-              className={`shrink-0 text-[9px] tracking-[0.14em] uppercase px-2 py-1 rounded-sm border ${
-                stretch
-                  ? "border-border text-muted-foreground"
-                  : "border-primary/50 bg-primary/8 text-primary"
+              className={`shrink-0 ${
+                stretch ? "chip chip--muted" : "chip chip--gold"
               }`}
             >
               {stretch ? "Stretch" : match.fitLabel}
@@ -1425,11 +1410,11 @@ function WhyThisFits({
   return (
     <div className="mb-7">
       <p className="label-eyebrow mb-2">Why this fits</p>
-      <ul className="space-y-2 rounded-sm border border-border bg-card/40 px-4 py-4">
+      <ul className="glass-list">
         {reasons.map((r) => (
           <li
             key={r.code}
-            className="text-[12.5px] text-foreground/85 leading-relaxed flex gap-2"
+            className="text-[12.5px] text-foreground/85 leading-relaxed flex gap-2 py-3"
           >
             <Check
               className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5"
@@ -1636,7 +1621,7 @@ function WizardNav({
       {canBack ? (
         <button
           onClick={onBack}
-          className="tap press flex-1 min-h-[52px] rounded-sm border border-border text-[13px] tracking-[0.14em] uppercase text-muted-foreground active:text-foreground transition-colors"
+          className="tap press pill flex-1"
         >
           Back
         </button>
@@ -1677,7 +1662,7 @@ function SelectField({
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full appearance-none bg-transparent border-b border-border focus:border-primary/60 outline-none py-2.5 pr-8 font-serif text-base text-foreground tabular-nums transition-colors"
+          className="field appearance-none pr-8 font-serif text-base tabular-nums"
         >
           {options.map((o) => (
             <option key={o.value} value={o.value} className="bg-card text-foreground">
@@ -1715,11 +1700,7 @@ function CityChips({
               key={c}
               type="button"
               onClick={() => onChange(c)}
-              className={`tap press min-h-[44px] px-3.5 rounded-sm border text-[12px] transition-colors ${
-                active
-                  ? "border-primary text-primary bg-primary/10"
-                  : "border-border text-muted-foreground active:text-foreground"
-              }`}
+              className={`tap press pill ${active ? "pill--on" : ""}`}
             >
               {c}
             </button>
@@ -1742,7 +1723,7 @@ function CurrencyField({
   return (
     <label className="block">
       <span className="label-eyebrow block mb-2">{label}</span>
-      <div className="flex items-center gap-2 border-b border-border focus-within:border-primary/60 transition-colors py-2 min-h-[48px]">
+      <div className="field flex items-center gap-2">
         <span className="font-serif text-base text-muted-foreground/70">£</span>
         <input
           type="number"
@@ -1764,18 +1745,14 @@ function PeriodTabs({
   onChange: (v: HoldingPeriod) => void;
 }) {
   return (
-    <div className="inline-flex border border-border rounded-sm overflow-hidden">
+    <div className="seg">
       {HOLDING_PERIODS.map((h) => {
         const active = h === value;
         return (
           <button
             key={h}
             onClick={() => onChange(h)}
-            className={`tap press text-[11px] tracking-[0.14em] uppercase px-3.5 min-h-[44px] transition-colors ${
-              active
-                ? "bg-primary/15 text-primary"
-                : "text-muted-foreground active:text-foreground"
-            }`}
+            className={`tap seg__btn ${active ? "seg__btn--on" : ""}`}
           >
             {h}Y
           </button>
@@ -1859,7 +1836,7 @@ function ProjectionMiniChart({
                 cumulativeIncome: number;
               };
               return (
-                <div className="bg-card border border-border px-3 py-2 rounded-sm shadow-lg min-w-[140px]">
+                <div className="dash-chart-tip min-w-[140px]">
                   <p className="text-[9px] tracking-[0.16em] uppercase text-muted-foreground mb-2">
                     {p.label}
                   </p>
@@ -1966,7 +1943,7 @@ function FinalOutlook({
           Cumulative income
         </span>
       </div>
-      <div className="rounded-sm border border-primary/40 bg-primary/[0.04] px-5 py-6 mb-5">
+      <div className="glass-gold glass--pad mb-5">
         <p className="label-eyebrow !text-primary/85 mb-3">
           Total Return · {holding}Y
         </p>
@@ -1989,7 +1966,7 @@ function FinalOutlook({
       <div className="mb-6">
         <button
           onClick={() => setBreakdownOpen((s: boolean) => !s)}
-          className="tap press w-full flex items-center justify-between min-h-[44px] py-3 border-t border-b border-border text-[10px] tracking-[0.18em] uppercase text-muted-foreground active:text-foreground transition-colors"
+          className="btn-quiet w-full justify-between"
           aria-expanded={breakdownOpen}
         >
           <span>Year-by-year breakdown</span>
@@ -2034,7 +2011,7 @@ function FinalOutlook({
       <div className="mb-6">
         <button
           onClick={() => setAssumptionsOpen((s: boolean) => !s)}
-          className="tap press w-full flex items-center justify-between py-3 border-t border-b border-border text-[10px] tracking-[0.18em] uppercase text-muted-foreground active:text-foreground transition-colors"
+          className="btn-quiet w-full justify-between"
           aria-expanded={assumptionsOpen}
         >
           <span>Assumptions</span>
@@ -2046,7 +2023,7 @@ function FinalOutlook({
           />
         </button>
         {assumptionsOpen && (
-          <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-5 px-4 py-5 rounded-sm border border-dashed border-border animate-fade-up">
+          <div className="glass stat-grid mt-5 animate-fade-up">
             <Assumption
               label="Capital Growth"
               value={`${annualGrowth.toFixed(1)}% / yr`}

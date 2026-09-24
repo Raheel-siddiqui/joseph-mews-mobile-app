@@ -11,6 +11,29 @@ export const PROSPECT_EMAIL = "oliver.hartley@example.com";
 
 const PERSONA_KEY = "jm_persona";
 const EMAIL_KEY = "jm_email";
+const NAME_KEY = "jm_name";
+const PHOTO_KEY = "jm_photo";
+
+function photoKey(email: string) {
+  return `${PHOTO_KEY}:${email.trim().toLowerCase()}`;
+}
+
+export function readProfilePhoto(email: string): string | null {
+  try {
+    return localStorage.getItem(photoKey(email));
+  } catch {
+    return null;
+  }
+}
+
+export function saveProfilePhoto(email: string, dataUrl: string) {
+  localStorage.setItem(photoKey(email), dataUrl);
+}
+
+function withStoredPhoto<T extends { email: string; photo?: string }>(user: T): T {
+  const stored = readProfilePhoto(user.email);
+  return stored ? { ...user, photo: stored } : user;
+}
 
 export const prospect = {
   name: "Oliver Hartley",
@@ -52,12 +75,14 @@ function canUseSession(): boolean {
   return typeof sessionStorage !== "undefined";
 }
 
-export function setSession(email: string): Persona {
+export function setSession(email: string, name?: string): Persona {
   const persona = resolvePersona(email);
   const normalised = email.trim().toLowerCase();
   if (canUseSession()) {
     sessionStorage.setItem(PERSONA_KEY, persona);
     sessionStorage.setItem(EMAIL_KEY, normalised);
+    if (name?.trim()) sessionStorage.setItem(NAME_KEY, name.trim());
+    else sessionStorage.removeItem(NAME_KEY);
   }
   return persona;
 }
@@ -66,6 +91,7 @@ export function clearSession() {
   if (!canUseSession()) return;
   sessionStorage.removeItem(PERSONA_KEY);
   sessionStorage.removeItem(EMAIL_KEY);
+  sessionStorage.removeItem(NAME_KEY);
 }
 
 export function getPersona(): Persona {
@@ -89,10 +115,20 @@ export function isInvestor(): boolean {
 
 export function getActiveUser(): ActiveUser {
   const persona = getPersona();
-  if (persona === "investor") return investor;
-  if (persona === "single") return singleInvestor;
+  if (persona === "investor") return withStoredPhoto(investor);
+  if (persona === "single") return withStoredPhoto(singleInvestor);
   const email = getSessionEmail();
-  return email ? { ...prospect, email } : prospect;
+  const storedName = canUseSession() ? sessionStorage.getItem(NAME_KEY) : null;
+  const named = storedName
+    ? {
+        name: storedName,
+        firstName: storedName.split(" ")[0] || storedName,
+      }
+    : {};
+  const user = email
+    ? { ...prospect, email, ...named }
+    : { ...prospect, ...named };
+  return withStoredPhoto(user);
 }
 
 export function userInitials(user: ActiveUser = getActiveUser()): string {

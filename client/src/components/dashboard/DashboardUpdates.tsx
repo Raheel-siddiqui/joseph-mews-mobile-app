@@ -87,7 +87,7 @@ export function DashboardUpdates() {
         when: opportunity.expectedCompletion,
         href: `/explore/${opportunity.id}`,
         thumb: opportunityImageSrc(opportunity),
-        chip: opportunity.status,
+        chip: opportunity.status === "Available" ? opportunity.status : undefined,
       }));
 
     return [...fromMarket, ...fromFeed];

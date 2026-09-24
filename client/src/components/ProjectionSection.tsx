@@ -59,10 +59,8 @@ export function ProjectionSection({
 
   return (
     <section className="py-7 animate-fade-up">
-      <div className="flex items-baseline justify-between mb-6">
-        <div>
-          <h3 className="font-serif text-xl tracking-tight">{title}</h3>
-        </div>
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <h3 className="section-kicker mb-0">{title}</h3>
         <HorizonTabs value={horizon} onChange={setHorizon} />
       </div>
 
@@ -72,25 +70,29 @@ export function ProjectionSection({
         <p className="text-[12px] text-muted-foreground/90 leading-snug mb-4">
           In {horizon} years, this property could generate:
         </p>
-        <div className="space-y-3.5">
-          <SummaryLine
-            label="Capital growth"
-            value={fmt.currency(result.totalCapitalGain)}
-            tone="primary"
-          />
-          <div className="hairline" />
-          <SummaryLine
-            label="Cumulative income"
-            value={fmt.currency(result.totalNetIncome)}
-          />
-          <div className="hairline" />
-          <SummaryLine
-            label="Total return (capital + income)"
-            value={fmt.currency(result.totalReturn)}
-            sub={`+${result.totalReturnPct.toFixed(0)}% on start value · illustrative`}
-            tone="primary"
-            big
-          />
+        <div className="glass-list">
+          <div className="py-3.5">
+            <SummaryLine
+              label="Capital growth"
+              value={fmt.currency(result.totalCapitalGain)}
+              tone="primary"
+            />
+          </div>
+          <div className="py-3.5">
+            <SummaryLine
+              label="Accumulative Rental Income"
+              value={fmt.currency(result.totalNetIncome)}
+            />
+          </div>
+          <div className="py-3.5">
+            <SummaryLine
+              label="Total return (capital + income)"
+              value={fmt.currency(result.totalReturn)}
+              sub={`${result.totalReturnPct.toFixed(2)}% on start value · illustrative`}
+              tone="primary"
+              big
+            />
+          </div>
         </div>
       </div>
 
@@ -107,7 +109,7 @@ export function ProjectionSection({
         </span>
         <span className="inline-flex items-center gap-2">
           <span className="w-3 h-px border-t border-dashed border-primary/60" />
-          Cumulative income
+          Accumulative rental income
         </span>
       </div>
 
@@ -116,7 +118,7 @@ export function ProjectionSection({
       {/* Yearly breakdown (collapsed) */}
       <button
         onClick={() => setShowBreakdown((s) => !s)}
-        className="tap press w-full flex items-center justify-between py-3 border-t border-b border-border text-[10px] tracking-[0.18em] uppercase text-muted-foreground active:text-foreground transition-colors"
+        className="btn-quiet w-full justify-between"
         aria-expanded={showBreakdown}
       >
         <span>Year-by-year breakdown</span>
@@ -173,16 +175,18 @@ export function ProjectionSection({
       {/* Assumptions */}
       <div className="mt-7">
         <p className="label-eyebrow mb-3">Assumptions</p>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-4 px-4 py-4 rounded-sm border border-dashed border-border">
-          <Assumption label="Capital Growth" value={`${input.annualGrowth.toFixed(1)}% / yr`} />
-          <Assumption label="Rental Growth" value={`${input.rentalGrowth.toFixed(1)}% / yr`} />
+        <div className="glass stat-grid">
+          <Assumption
+            label="Capital Growth"
+            value={`${input.annualGrowth.toFixed(2)}% / yr`}
+          />
+          <Assumption
+            label="Rental Growth"
+            value={`${Number.isInteger(input.rentalGrowth) ? input.rentalGrowth.toFixed(0) : input.rentalGrowth.toFixed(1)}% / yr`}
+          />
           {hasMortgage && typeof mortgageRate === "number" && (
             <Assumption label="Mortgage Rate" value={`${mortgageRate.toFixed(2)}%`} />
           )}
-          <Assumption
-            label="Cost Inflation"
-            value={`${(input.costGrowth ?? 2.5).toFixed(1)}% / yr`}
-          />
         </div>
       </div>
 
@@ -193,10 +197,11 @@ export function ProjectionSection({
           strokeWidth={1.5}
         />
         <p className="text-[11px] leading-relaxed text-muted-foreground">
-          Illustrative projection based on stated assumptions — not a forecast
-          of guaranteed returns, and not financial advice. Actual results will
-          vary. Past performance is not a reliable indicator of future
-          performance. Speak with your advisor before making decisions.
+          Illustrative projection based on assumptions derived from HPI (House
+          Property Index) data - not a forecast of guaranteed returns, and not
+          financial advice. Actual results will vary. Past performance is not
+          a reliable indicator of future performance. Speak with your advisor
+          before making decisions.
         </p>
       </div>
     </section>
@@ -213,18 +218,14 @@ function HorizonTabs({
   onChange: (v: ProjectionHorizon) => void;
 }) {
   return (
-    <div className="inline-flex border border-border rounded-sm overflow-hidden">
+    <div className="seg">
       {HORIZONS.map((h) => {
         const active = value === h;
         return (
           <button
             key={h}
             onClick={() => onChange(h)}
-            className={`tap press text-[11px] tracking-[0.14em] uppercase px-3.5 min-h-[40px] transition-colors ${
-              active
-                ? "bg-primary/15 text-primary"
-                : "text-muted-foreground active:text-foreground"
-            }`}
+            className={`tap seg__btn ${active ? "seg__btn--on" : ""}`}
           >
             {h}Y
           </button>
@@ -311,7 +312,7 @@ function ProjectionChart({
                 cumulativeIncome: number;
               };
               return (
-                <div className="bg-card border border-border px-3 py-2 rounded-sm shadow-lg min-w-[140px]">
+                <div className="dash-chart-tip min-w-[140px]">
                   <p className="text-[9px] tracking-[0.16em] uppercase text-muted-foreground mb-2">
                     {p.label}
                   </p>

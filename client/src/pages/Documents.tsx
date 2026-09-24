@@ -2,17 +2,18 @@
 // Design: Search-based, clean list, categories with counts + user upload
 import { AppShell } from "@/components/AppShell";
 import { ModalShell, SuccessState } from "@/components/ModalShell";
-import { Document } from "@/lib/data";
-import { getActiveDocuments } from "@/lib/holdings";
+import { Document, getProperty } from "@/lib/data";
+import { getActiveDocuments, getActiveProperties } from "@/lib/holdings";
 import {
   Search,
   FileText,
+  ChevronDown,
   ChevronRight,
   Download,
   Upload,
   Plus,
 } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 const CATEGORIES: Document["category"][] = [
@@ -24,6 +25,8 @@ const CATEGORIES: Document["category"][] = [
   "Others",
 ];
 
+const MAX_FILE_BYTES = 25 * 1024 * 1024;
+
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
@@ -32,7 +35,9 @@ function formatFileSize(bytes: number): string {
 
 function fileTypeFromName(name: string): Document["fileType"] {
   const ext = name.split(".").pop()?.toLowerCase();
-  return ext === "doc" || ext === "docx" ? "DOC" : "PDF";
+  if (ext === "doc" || ext === "docx") return "DOC";
+  if (ext === "jpg" || ext === "jpeg" || ext === "png") return "JPG";
+  return "PDF";
 }
 
 export default function Documents() {
@@ -43,6 +48,24 @@ export default function Documents() {
   >("All");
   const [selected, setSelected] = useState<Document | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const chipRailRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const rail = chipRailRef.current;
+    if (!rail) return;
+    const onWheel = (event: WheelEvent) => {
+      if (rail.scrollWidth <= rail.clientWidth) return;
+      const delta =
+        Math.abs(event.deltaX) > Math.abs(event.deltaY)
+          ? event.deltaX
+          : event.deltaY;
+      if (!delta) return;
+      rail.scrollLeft += delta;
+      event.preventDefault();
+    };
+    rail.addEventListener("wheel", onWheel, { passive: false });
+    return () => rail.removeEventListener("wheel", onWheel);
+  }, []);
 
   const filtered = useMemo(() => {
     return docs.filter((d) => {
@@ -77,54 +100,51 @@ export default function Documents() {
     <AppShell>
       <div className="page-px">
         {/* Header */}
-        <div className="pt-4 pb-6 animate-fade-up">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="label-eyebrow mb-2">Library</p>
-              <h1 className="font-serif text-2xl sm:text-3xl tracking-tight mb-1">
-                Documents
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                {docs.length} files
-                {recentCount > 0 && (
-                  <>
-                    {" · "}
-                    <span className="text-primary">{recentCount} new</span>
-                  </>
-                )}
-              </p>
-            </div>
-            <button
-              onClick={() => setShowUpload(true)}
-              className="tap press flex-shrink-0 inline-flex items-center gap-1.5 mt-1 px-3 py-2 rounded-sm border border-primary/50 text-primary text-[11px] tracking-wider uppercase active:bg-primary/5 transition-colors min-h-[40px]"
-            >
-              <Plus className="w-3.5 h-3.5" strokeWidth={1.75} />
-              Upload
-            </button>
+        <header className="page-intro flex items-center justify-between gap-3 animate-fade-up">
+          <div className="min-w-0">
+            <p className="label-eyebrow">Library</p>
+            <h1 className="page-intro__title">Documents</h1>
+            <p className="page-intro__sub">
+              {docs.length} files
+              {recentCount > 0 && (
+                <>
+                  {" · "}
+                  <span className="text-primary">{recentCount} new</span>
+                </>
+              )}
+            </p>
           </div>
-        </div>
+          <button
+            type="button"
+            onClick={() => setShowUpload(true)}
+            className="tap press inline-flex shrink-0 items-center gap-1 rounded-lg border border-primary px-3 py-2 text-[11px] font-medium uppercase tracking-[0.12em] text-primary"
+          >
+            <Plus className="w-3.5 h-3.5" strokeWidth={1.75} />
+            Upload
+          </button>
+        </header>
 
-        {/* Search */}
         <div
-          className="relative mb-6 animate-fade-up"
+          className="search-field mb-5 animate-fade-up"
           style={{ animationDelay: "60ms" }}
         >
           <Search
-            className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
+            className="w-4 h-4 text-muted-foreground shrink-0"
             strokeWidth={1.5}
           />
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search documents…"
-            className="w-full bg-transparent border-0 border-b border-border pl-7 pr-2 py-3 text-base sm:text-sm focus:outline-none focus:border-primary transition-colors"
+            placeholder="Search documents..."
+            aria-label="Search documents"
           />
         </div>
 
         {/* Category chips */}
         <div
-          className="flex gap-2 overflow-x-auto scrollbar-hide -mx-page page-px pb-6 animate-fade-up"
+          ref={chipRailRef}
+          className="chip-rail pb-5 animate-fade-up"
           style={{ animationDelay: "120ms" }}
         >
           <CategoryChip
@@ -144,66 +164,54 @@ export default function Documents() {
           ))}
         </div>
 
-        <div className="hairline mb-2" />
-
-        {/* Document list */}
-        <div className="divide-y divide-border">
-          {filtered.length === 0 ? (
-            <div className="py-16 text-center">
-              <p className="label-eyebrow mb-2">No results</p>
-              <p className="text-sm text-muted-foreground mb-5">
-                Try a different search or category
-              </p>
-              <button
-                onClick={() => setShowUpload(true)}
-                className="tap press inline-flex items-center gap-1.5 px-3.5 py-2 rounded-sm border border-primary/50 text-primary text-[11px] tracking-wider uppercase active:bg-primary/5 transition-colors"
-              >
-                <Upload className="w-3.5 h-3.5" strokeWidth={1.75} />
-                Upload a document
-              </button>
-            </div>
-          ) : (
-            filtered.map((doc, i) => (
+        {filtered.length === 0 ? (
+          <div className="glass glass--pad py-12 text-center">
+            <p className="label-eyebrow mb-2">No results</p>
+            <p className="text-sm text-muted-foreground mb-4">
+              Try a different search or category
+            </p>
+            <button
+              onClick={() => setShowUpload(true)}
+              className="btn-quiet mx-auto"
+            >
+              <Upload className="w-3.5 h-3.5" strokeWidth={1.75} />
+              Upload a document
+            </button>
+          </div>
+        ) : (
+          <div className="glass-list">
+            {filtered.map((doc, i) => (
               <button
                 key={doc.id}
                 onClick={() => setSelected(doc)}
-                className="w-full flex items-center gap-4 py-5 group text-left animate-fade-up tap press min-h-[60px]"
+                className="row group tap press animate-fade-up"
                 style={{ animationDelay: `${i * 40}ms` }}
               >
-                <div className="w-11 h-11 rounded-sm border border-border flex items-center justify-center flex-shrink-0 group-hover:border-primary/40 transition-colors">
-                  <FileText
-                    className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors"
-                    strokeWidth={1.5}
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-medium text-sm truncate">{doc.name}</h3>
-                    {doc.isNew && (
-                      <span className="text-[10px] tracking-widest uppercase text-primary border border-primary/30 px-1.5 py-0.5 rounded-sm flex-shrink-0">
-                        New
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    <span className="text-foreground/70">{doc.category}</span>
-                    {" · "}
-                    <span className="font-mono text-[11px]">{doc.fileType}</span>
-                    {" · "}
-                    {doc.size}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground/70 mt-1">
+                <span className="icon-well">
+                  <FileText className="w-4 h-4" strokeWidth={1.5} />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="flex items-center gap-2 mb-0.5">
+                    <span className="font-medium text-[0.9375rem] tracking-tight truncate">
+                      {doc.name}
+                    </span>
+                    {doc.isNew && <span className="chip chip--gold">New</span>}
+                  </span>
+                  <span className="block text-xs text-muted-foreground truncate">
+                    {doc.category} · {doc.fileType} · {doc.size}
+                  </span>
+                  <span className="block text-[11px] text-muted-foreground/70 mt-0.5">
                     {doc.uploaded}
-                  </p>
-                </div>
+                  </span>
+                </span>
                 <ChevronRight
-                  className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all flex-shrink-0"
+                  className="w-4 h-4 text-muted-foreground group-hover:text-primary shrink-0"
                   strokeWidth={1.5}
                 />
               </button>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
 
         <div className="h-6" />
       </div>
@@ -235,11 +243,7 @@ function CategoryChip({
   return (
     <button
       onClick={onClick}
-      className={`flex-shrink-0 inline-flex items-center gap-2 px-3.5 py-2 rounded-sm border transition-all text-[11px] tracking-wider uppercase tap press min-h-[40px] ${
-        active
-          ? "border-primary text-primary bg-primary/5"
-          : "border-border text-muted-foreground active:text-foreground"
-      }`}
+      className={`tap press pill ${active ? "pill--on" : ""}`}
     >
       <span>{label}</span>
       <span className="tabular-nums opacity-70">{count}</span>
@@ -257,11 +261,20 @@ function UploadSheet({
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState("");
+  const [propertyId, setPropertyId] = useState("");
   const [category, setCategory] = useState<Document["category"]>("Others");
   const [done, setDone] = useState(false);
+  const properties = getActiveProperties();
 
   const handleFile = (f: File | null) => {
     if (!f) return;
+    if (f.size > MAX_FILE_BYTES) {
+      toast("File is too large", {
+        description: "Each file can be up to 25 MB.",
+      });
+      if (inputRef.current) inputRef.current.value = "";
+      return;
+    }
     setFile(f);
     const base = f.name.replace(/\.[^.]+$/, "");
     setName(base);
@@ -275,9 +288,10 @@ function UploadSheet({
       id: `upload-${Date.now()}`,
       name: name.trim(),
       category,
+      property: propertyId && propertyId !== "none" ? propertyId : undefined,
       fileType: fileTypeFromName(file.name),
       size: formatFileSize(file.size),
-      uploaded: "Uploaded just now",
+      uploaded: "Updated just now",
       isNew: true,
     };
     onUploaded(doc);
@@ -286,7 +300,7 @@ function UploadSheet({
 
   if (done) {
     return (
-      <ModalShell onClose={onClose} title="Upload document">
+      <ModalShell onClose={onClose} title="Upload documents">
         <SuccessState
           headline="Document added"
           body={`${name.trim()} is in your library under ${category}.`}
@@ -297,16 +311,16 @@ function UploadSheet({
   }
 
   return (
-    <ModalShell onClose={onClose} title="Upload document">
+    <ModalShell onClose={onClose} title="Upload documents">
       <p className="text-[12.5px] text-muted-foreground leading-relaxed mb-5">
-        Add a file to your library and choose a category so it appears in the
+        Add files to your library and choose a category so they appear in the
         right filter.
       </p>
 
       <input
         ref={inputRef}
         type="file"
-        accept=".pdf,.doc,.docx,application/pdf"
+        accept=".pdf,.doc,.docx,image/*,application/pdf"
         className="hidden"
         onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
       />
@@ -314,7 +328,7 @@ function UploadSheet({
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        className="tap press w-full rounded-sm border border-dashed border-border px-4 py-6 mb-5 text-center active:bg-card/40 transition-colors"
+        className="tap press glass glass--pad w-full mb-5 text-center"
       >
         <Upload
           className="w-5 h-5 text-primary mx-auto mb-2.5"
@@ -329,9 +343,9 @@ function UploadSheet({
           </>
         ) : (
           <>
-            <p className="text-[13px] font-medium">Choose a file</p>
+            <p className="text-[13px] font-medium">Choose files</p>
             <p className="text-[11px] text-muted-foreground mt-1">
-              PDF or DOC · up to 25 MB
+              Files, gallery, or camera · up to 25 MB each
             </p>
           </>
         )}
@@ -344,8 +358,28 @@ function UploadSheet({
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Insurance certificate"
-          className="w-full bg-transparent border-0 border-b border-border py-2.5 text-sm focus:outline-none focus:border-primary transition-colors"
+          className="field text-sm"
         />
+      </label>
+
+      <label className="block mb-5">
+        <span className="label-eyebrow mb-2 block">Property</span>
+        <span className="relative block">
+          <select
+            value={propertyId}
+            onChange={(e) => setPropertyId(e.target.value)}
+            className="field w-full appearance-none pr-10 text-sm"
+          >
+            <option value="">Select property (optional)</option>
+            <option value="none">None</option>
+            {properties.map((property) => (
+              <option key={property.id} value={property.id}>
+                {property.name}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        </span>
       </label>
 
       <div className="mb-6">
@@ -356,10 +390,8 @@ function UploadSheet({
               key={cat}
               type="button"
               onClick={() => setCategory(cat)}
-              className={`tap press px-3 py-2 rounded-sm border text-[11px] tracking-wider uppercase transition-all min-h-[36px] ${
-                category === cat
-                  ? "border-primary text-primary bg-primary/5"
-                  : "border-border text-muted-foreground active:text-foreground"
+              className={`tap press pill ${
+                category === cat ? "pill--on" : ""
               }`}
             >
               {cat}
@@ -372,7 +404,7 @@ function UploadSheet({
         type="button"
         disabled={!canSubmit}
         onClick={handleSubmit}
-        className="tap press w-full flex items-center justify-center gap-2 py-3.5 rounded-sm bg-primary text-primary-foreground font-medium tracking-[0.08em] text-[12.5px] uppercase active:opacity-90 transition-opacity disabled:opacity-40 disabled:pointer-events-none"
+        className="tap press btn-gold"
       >
         <Upload className="w-3.5 h-3.5" strokeWidth={1.75} />
         Upload to library
@@ -380,7 +412,7 @@ function UploadSheet({
       <button
         type="button"
         onClick={onClose}
-        className="tap w-full py-3 mt-2 text-[12px] tracking-[0.12em] uppercase text-muted-foreground active:text-foreground transition-colors"
+        className="btn-quiet w-full mt-2"
       >
         Cancel
       </button>
@@ -397,7 +429,7 @@ function DocumentSheet({
 }) {
   const handleDownload = () => {
     const body = [
-      "Joseph Mews — Document Vault",
+      "Mews One — Document Vault",
       "————————————————————",
       `Document: ${doc.name}`,
       `Category: ${doc.category}`,
@@ -429,11 +461,11 @@ function DocumentSheet({
 
   return (
     <ModalShell onClose={onClose} title={doc.name}>
-      <div className="rounded-sm border border-border px-4 py-4 mb-5">
+      <div className="glass glass--pad mb-5">
         <div className="flex items-start gap-3.5">
-          <div className="w-11 h-11 rounded-sm border border-border flex items-center justify-center flex-shrink-0">
-            <FileText className="w-4 h-4 text-primary" strokeWidth={1.5} />
-          </div>
+          <span className="icon-well">
+            <FileText className="w-4 h-4" strokeWidth={1.5} />
+          </span>
           <div className="min-w-0 flex-1">
             <p className="label-eyebrow mb-2">{doc.category}</p>
             <p className="text-sm text-foreground/85 leading-relaxed">
@@ -441,32 +473,33 @@ function DocumentSheet({
             </p>
             <p className="text-[11px] text-muted-foreground mt-1.5">
               {doc.uploaded}
-              {doc.property ? ` · ${doc.property}` : ""}
+              {doc.property
+                ? ` · ${getProperty(doc.property)?.name ?? doc.property}`
+                : ""}
             </p>
           </div>
         </div>
       </div>
 
-      <div className="rounded-sm border border-dashed border-border px-3.5 py-4 mb-6">
+      <div className="glass-gold glass--pad mb-6">
         <p className="text-[12.5px] text-foreground/85 leading-snug mb-2">
-          Sample file
+          Keep a copy
         </p>
         <p className="text-[12.5px] text-muted-foreground leading-relaxed">
-          Download a sample copy of this document for your records. In
-          production, the signed original would be provided here.
+          Save this document to your phone so you can open it anytime.
         </p>
       </div>
 
       <button
         onClick={handleDownload}
-        className="tap press w-full flex items-center justify-center gap-2 py-3.5 rounded-sm bg-primary text-primary-foreground font-medium tracking-[0.08em] text-[12.5px] uppercase active:opacity-90 transition-opacity"
+        className="tap press btn-gold"
       >
         <Download className="w-3.5 h-3.5" strokeWidth={1.75} />
-        Download sample
+        Download
       </button>
       <button
         onClick={onClose}
-        className="tap w-full py-3 mt-2 text-[12px] tracking-[0.12em] uppercase text-muted-foreground active:text-foreground transition-colors"
+        className="btn-quiet w-full mt-2"
       >
         Close
       </button>

@@ -15,22 +15,16 @@ export default function EmptyExplore() {
           <PreviewChip />
         </div>
 
-        <div className="pt-2 pb-6 animate-fade-up">
-          <p className="label-eyebrow mb-2">Marketplace</p>
-          <h1 className="font-serif text-2xl sm:text-3xl tracking-tight mb-1">
-            Explore
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Curated opportunities
-          </p>
-        </div>
-
-        <div className="hairline mb-2" />
+        <header className="page-intro animate-fade-up">
+          <p className="label-eyebrow">Marketplace</p>
+          <h1 className="page-intro__title">Explore</h1>
+          <p className="page-intro__sub">Curated opportunities</p>
+        </header>
 
         <EmptyCentre
           eyebrow="No opportunities"
           title="Nothing available right now"
-          body="New developments will appear here when Joseph Mews publishes them. Speak with your advisor if you’d like an early briefing."
+          body="New developments will appear here when Mews One publishes them. Speak with your advisor if you’d like an early briefing."
         />
 
         <AdvisorCta />

@@ -3,7 +3,7 @@
 
 import type { MortgagePlan } from "@/lib/paymentPlan";
 
-export type PropertyStatus = "Tenanted" | "In Build" | "Vacant" | "Refurbishment";
+export type PropertyStatus = "Tenanted" | "In Build" | "Vacant" | "Refurbishment" | "Available";
 
 export interface Property {
   id: string;
@@ -580,7 +580,7 @@ export interface Document {
   name: string;
   category: "Contracts" | "Rental" | "Tax" | "Mortgage" | "Legal" | "Others";
   property?: string;
-  fileType: "PDF" | "DOC";
+  fileType: "PDF" | "DOC" | "JPG";
   size: string;
   uploaded: string;
   isNew?: boolean;
@@ -589,90 +589,24 @@ export interface Document {
 export const documents: Document[] = [
   {
     id: "d1",
-    name: "Tenancy Agreement — Mayfair",
+    name: "C685C9A5-0AA6-4C48-9EB7-31B8FD786022",
     category: "Rental",
-    property: "JM-001",
-    fileType: "PDF",
-    size: "2.4 MB",
-    uploaded: "Updated 3 days ago",
-    isNew: true,
+    fileType: "JPG",
+    size: "1.7 MB",
+    uploaded: "Updated 1 week ago",
   },
   {
     id: "d2",
-    name: "Annual Tax Summary 2025/26",
-    category: "Tax",
-    fileType: "PDF",
-    size: "1.8 MB",
-    uploaded: "Updated 3 days ago",
-    isNew: true,
-  },
-  {
-    id: "d3",
-    name: "Purchase Contract — Hawthorn",
+    name: "0725C736-5421-4215-81AB-9DC327BD073A",
     category: "Contracts",
-    property: "JM-003",
-    fileType: "PDF",
-    size: "4.1 MB",
-    uploaded: "Updated 2 weeks ago",
-  },
-  {
-    id: "d4",
-    name: "Mortgage Statement — Mayfair",
-    category: "Mortgage",
-    property: "JM-001",
-    fileType: "PDF",
-    size: "892 KB",
-    uploaded: "Updated 1 month ago",
-  },
-  {
-    id: "d5",
-    name: "Tenancy Agreement — Deansgate",
-    category: "Rental",
-    property: "JM-002",
-    fileType: "PDF",
-    size: "2.1 MB",
-    uploaded: "Updated 2 months ago",
-  },
-  {
-    id: "d6",
-    name: "Lease Title Deed — Liverpool",
-    category: "Legal",
-    property: "JM-004",
-    fileType: "PDF",
-    size: "3.6 MB",
-    uploaded: "Updated 4 months ago",
-  },
-  {
-    id: "d7",
-    name: "Mortgage Statement — Liverpool",
-    category: "Mortgage",
-    property: "JM-004",
-    fileType: "PDF",
-    size: "865 KB",
-    uploaded: "Updated 1 month ago",
-  },
-  {
-    id: "d8",
-    name: "Tenancy Agreement — Liverpool",
-    category: "Rental",
-    property: "JM-004",
-    fileType: "PDF",
-    size: "1.9 MB",
-    uploaded: "Updated 6 months ago",
-  },
-  {
-    id: "d9",
-    name: "Purchase Contract — Mayfair",
-    category: "Contracts",
-    property: "JM-001",
-    fileType: "PDF",
-    size: "5.2 MB",
-    uploaded: "Updated 14 months ago",
+    fileType: "JPG",
+    size: "83 KB",
+    uploaded: "Updated 1 week ago",
   },
 ];
 
 export const LOGO_URL = "/joseph-mews-logo.svg";
-export const HERO_TEXTURE = "https://d2xsxph8kpxj0f.cloudfront.net/113764710/ETLftU46Rt6EamfGSt3aTE/hero-texture-h8eVTcygCqs5s6BBg4mNvM.webp";
+export const HERO_TEXTURE = "/hero-texture.jpg";
 
 // Currency formatter
 export const fmt = {
@@ -690,5 +624,65 @@ export const fmt = {
 };
 
 export function getProperty(id: string) {
+  if (id === pennyPlace.id) return pennyPlace;
   return properties.find((p) => p.id === id);
 }
+
+/** Single-holding demo. Not part of the multi-property portfolio. */
+export const pennyPlace: Property = {
+  id: "JM-PENNY",
+  reference: "2",
+  name: "Penny Place",
+  location: "UK, WV1 3AE",
+  city: "",
+  postcode: "WV1 3AE",
+  image: "/properties/penny-place.jpg",
+  status: "Available",
+  bedrooms: 1,
+  bathrooms: 1,
+  sqft: 753,
+  purchaseDate: "Sep 2025",
+  purchasePrice: 204950,
+  currentValue: 239763,
+  capitalGrowth: 34813,
+  capitalGrowthPct: 16.98,
+  monthlyRent: 1776,
+  expectedRent: 1776,
+  monthlyServiceCharge: 126,
+  monthlyManagementFee: 0,
+  monthlyMortgage: 0,
+  netMonthlyIncome: 1232,
+  annualNetIncome: 14784,
+  grossYield: 10.4,
+  netYield: 10.4,
+  loanBalance: 77688,
+  equity: 96298,
+  occupancy: 80,
+  valueHistory: [
+    { month: "Sep '25", value: 204950, monthsAgo: 12 },
+    { month: "Mar '26", value: 204950, monthsAgo: 6 },
+    { month: "Aug '26", value: 204950, monthsAgo: 1 },
+    { month: "Sep '26", value: 239763, monthsAgo: 0 },
+  ],
+  rentHistory: [],
+  mortgagePlan: {
+    lender: "Developer payment schedule · default",
+    type: "Repayment",
+    rate: 2.9,
+    termYears: 2,
+    remainingTermMonths: 24,
+    monthlyPayment: 0,
+    outstandingBalance: 77688,
+    originalLoan: 77688,
+    nextDueDate: "Now",
+    schedule: [
+      { id: "pp-1", label: "Reservation Fee", amount: 5000, dueDate: "Now", status: "due" },
+      { id: "pp-2", label: "Exchange Deposit (5%) minus reservation fee", amount: 5248, dueDate: "On exchange", status: "upcoming" },
+      { id: "pp-3", label: "Exchange Deposit (25%) Total", amount: 51238, dueDate: "Paid over 24 month", status: "upcoming" },
+      { id: "pp-4", label: "Exchange Deposit (25%) monthly payments", amount: 2135, dueDate: "Paid over 24 month", status: "upcoming" },
+      { id: "pp-5", label: "Legal & Other Fees*", amount: 2220, dueDate: "On completion", status: "upcoming" },
+      { id: "pp-6", label: "Remaining Deposit", amount: 0, dueDate: "On completion", status: "upcoming" },
+      { id: "pp-7", label: "Stamp Duty (SDLT)", amount: 11847, dueDate: "On completion", status: "upcoming" },
+    ],
+  },
+};

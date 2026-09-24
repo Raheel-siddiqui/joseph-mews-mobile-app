@@ -575,7 +575,7 @@ function planReasons(
     components.push({
       key: "diversifies_portfolio",
       score: row.diversificationScore,
-      copy: "Adds exposure to a market not currently represented in your Joseph Mews portfolio.",
+      copy: "Adds exposure to a market not currently represented in your Mews One portfolio.",
     });
   }
   components.sort((a, b) => b.score - a.score);

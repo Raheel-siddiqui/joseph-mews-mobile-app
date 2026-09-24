@@ -136,7 +136,7 @@ export function TrendLine<T extends Record<string, any>>({
             className={
               hero
                 ? "dash-chart-tip"
-                : "bg-card border border-border px-3 py-2 rounded-sm shadow-lg"
+                : "dash-chart-tip"
             }
           >
             <p

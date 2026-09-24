@@ -1,8 +1,10 @@
 // Joseph Mews — Portfolio List
-// Design: One property per row, large image, editorial typography
+// Same photo-card language as the dashboard holdings rail.
 import { Link } from "wouter";
 import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { AdvisorBar } from "@/components/dashboard/AdvisorBar";
+import { ContactAdvisorSheet } from "@/components/ContactAdvisorSheet";
 import { fmt } from "@/lib/data";
 import { propertyImageSrc } from "@/lib/propertyImage";
 import {
@@ -11,104 +13,80 @@ import {
   isSingleHolding,
   propertyCountLabel,
 } from "@/lib/holdings";
-import { ArrowUpRight, ArrowRight } from "lucide-react";
-import { ContactAdvisorSheet } from "@/components/ContactAdvisorSheet";
+import { getActiveUser } from "@/lib/session";
 
 export default function Portfolio() {
   const [contactOpen, setContactOpen] = useState(false);
   const properties = getActiveProperties();
   const portfolio = getActivePortfolio();
   const single = isSingleHolding();
+  const user = getActiveUser();
 
   return (
     <AppShell>
       <div className="page-px">
-        {/* Header */}
-        <div className="pt-3 pb-7 animate-fade-up">
-          <p className="label-eyebrow mb-2">Holdings</p>
-          <h1 className="font-serif text-[1.75rem] tracking-tight mb-1">
+        <header className="page-intro animate-fade-up">
+          <p className="label-eyebrow">Holdings</p>
+          <h1 className="page-intro__title">
             {single ? "Your Property" : "Portfolio"}
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="page-intro__sub">
             {propertyCountLabel(portfolio.propertyCount)} ·{" "}
             {fmt.currency(portfolio.currentValue)}
           </p>
-        </div>
+        </header>
 
-        <div className="hairline mb-7" />
-
-        {/* Property list */}
-        <div className="space-y-9">
+        <div className="space-y-4">
           {properties.map((p, i) => (
             <Link
               key={p.id}
               href={`/property/${p.id}`}
-              className="tap press block animate-fade-up"
-              style={{ animationDelay: `${i * 80}ms` }}
+              className="photo-card photo-card--caption tap press animate-fade-up"
+              style={{ animationDelay: `${i * 70}ms` }}
             >
-              {/* Image */}
-              <div className="aspect-[16/10] rounded-sm overflow-hidden bg-card mb-4">
-                <img
-                  src={propertyImageSrc(p)}
-                  alt={p.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-
-              {/* Content */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="label-eyebrow truncate">
-                    {p.reference} · {p.status}
-                  </p>
-                  <ArrowRight
-                    className="w-4 h-4 text-muted-foreground shrink-0"
-                    strokeWidth={1.5}
-                  />
-                </div>
-                <h2 className="font-serif text-xl leading-tight mb-1">
-                  {p.name}
-                </h2>
-                <p className="text-[13px] text-muted-foreground mb-5">
-                  {p.location} · {p.city}
-                </p>
-
-                {/* Stats row — mobile: k-format Value to avoid clipping at 320px */}
-                <div className="grid grid-cols-3 gap-2 pt-4 border-t border-border">
-                  <Stat
-                    label="Value"
-                    value={kFmt(p.currentValue)}
-                    growth={p.capitalGrowthPct}
-                  />
-                  <Stat
-                    label="Rent"
-                    value={p.monthlyRent > 0 ? kFmt(p.monthlyRent) : "—"}
-                  />
-                  <Stat
-                    label="Gross Yield"
-                    value={p.grossYield > 0 ? fmt.pctPlain(p.grossYield) : "—"}
-                  />
-                </div>
-              </div>
+              <img
+                src={propertyImageSrc(p)}
+                alt={p.name}
+                className="photo-card__img"
+              />
+              <span className="photo-card__shade" />
+              {p.status === "Available" && (
+                <span className="photo-card__chip chip chip--on-photo">
+                  {p.status}
+                </span>
+              )}
+              <span className="photo-card__meta">
+                <span className="photo-card__kicker">{p.reference}</span>
+                <span className="photo-card__name">{p.name}</span>
+                <span className="photo-card__loc">
+                  {[p.location, p.city].filter(Boolean).join(" · ")}
+                </span>
+                <span className="photo-card__figs">
+                  <span>{fmt.currency(p.currentValue)}</span>
+                  <span>
+                    {p.monthlyRent > 0 ? `${fmt.currency(p.monthlyRent)}/mo` : "—"}
+                  </span>
+                  <span>
+                    {p.grossYield > 0 ? fmt.pctPlain(p.grossYield) : "—"}
+                  </span>
+                </span>
+              </span>
             </Link>
           ))}
         </div>
 
-        <div className="hairline mt-14 mb-8" />
-
-        <div className="text-center pb-4">
-          <p className="label-eyebrow mb-3">
-            {single
-              ? "Ready to grow beyond one holding?"
-              : "Considering an additional investment?"}
-          </p>
-          <button
-            onClick={() => setContactOpen(true)}
-            className="tap text-sm text-primary active:opacity-70 transition-opacity inline-flex items-center gap-1.5 min-h-[2.75rem] px-4"
-          >
-            Speak with your advisor
-            <ArrowRight className="w-3.5 h-3.5" strokeWidth={1.5} />
-          </button>
+        <div className="mt-8">
+          {single && (
+            <p className="label-eyebrow mb-3">
+              Ready to grow beyond one holding?
+            </p>
+          )}
+          <AdvisorBar
+            name={user.advisor}
+            title={user.advisorTitle}
+            photo={user.advisorPhoto}
+            onContact={() => setContactOpen(true)}
+          />
         </div>
       </div>
 
@@ -116,39 +94,5 @@ export default function Portfolio() {
         <ContactAdvisorSheet onClose={() => setContactOpen(false)} />
       )}
     </AppShell>
-  );
-}
-
-// Compact thousands formatter for property stat cells (Value, Rent)
-function kFmt(n: number): string {
-  if (n >= 1_000_000) return "£" + (n / 1_000_000).toFixed(2).replace(/\.?0+$/, "") + "M";
-  if (n >= 10_000) return "£" + Math.round(n / 1000) + "k";
-  return "£" + n.toLocaleString("en-GB");
-}
-
-function Stat({
-  label,
-  value,
-  growth,
-}: {
-  label: string;
-  value: string;
-  growth?: number;
-}) {
-  return (
-    <div className="min-w-0">
-      <p className="text-[10px] tracking-[0.14em] uppercase text-muted-foreground mb-1.5">
-        {label}
-      </p>
-      <p className="font-serif text-[15px] tabular-nums leading-none mb-1 truncate">
-        {value}
-      </p>
-      {growth !== undefined && growth > 0 && (
-        <p className="inline-flex items-center gap-0.5 text-[11px] text-primary tabular-nums">
-          <ArrowUpRight className="w-2.5 h-2.5" strokeWidth={2} />
-          {fmt.pct(growth)}
-        </p>
-      )}
-    </div>
   );
 }

@@ -34,27 +34,21 @@ export default function PartialDashboard() {
           <PreviewChip label="Preview · Partial data" />
         </div>
 
-        <div className="pt-1 pb-7 animate-fade-up">
-          <p className="label-eyebrow mb-1.5">{greeting}</p>
-          <h1 className="font-serif text-[1.375rem] tracking-tight">
-            {investor.firstName}
-          </h1>
-        </div>
+        <header className="page-intro animate-fade-up">
+          <p className="label-eyebrow">{greeting}</p>
+          <h1 className="page-intro__title">{investor.firstName}</h1>
+        </header>
 
-        <div className="mb-2 animate-fade-up">
-          <p className="label-eyebrow mb-3">Total Portfolio Value</p>
-          <h2 className="font-serif num-hero text-muted-foreground/80 mb-4">
-            —
-          </h2>
-          <p className="text-xs text-muted-foreground leading-relaxed mb-6">
+        <div className="pd-value mb-4 animate-fade-up">
+          <p className="label-eyebrow pd-value__label">Total Portfolio Value</p>
+          <h2 className="pd-value__amount text-muted-foreground/80">—</h2>
+          <p className="text-xs text-muted-foreground leading-relaxed">
             Some data is being completed by your advisor. Available figures are
             shown below; missing values appear as —.
           </p>
         </div>
 
-        <div className="hairline-gold my-8" />
-
-        <div className="grid grid-cols-3 gap-1.5 mb-10">
+        <div className="glass stat-grid stat-grid--3 mb-4">
           <DashMetric
             label="Invested"
             value={display(k.totalInvested, true)}
@@ -63,63 +57,57 @@ export default function PartialDashboard() {
           <DashMetric label="Loans" value="—" />
         </div>
 
-        <div className="space-y-5 mb-10">
-          <div>
-            <p className="text-[10px] tracking-[0.16em] uppercase text-muted-foreground mb-1">
-              Gross Yield
-            </p>
+        <div className="glass-list mb-8">
+          <div className="py-3.5">
+            <p className="label-eyebrow mb-1">Gross Yield</p>
             <p className="font-serif text-lg tabular-nums">—</p>
           </div>
-          <div className="hairline" />
-          <div>
-            <p className="text-[10px] tracking-[0.16em] uppercase text-muted-foreground mb-1">
-              Net Cash Flow
-            </p>
+          <div className="py-3.5">
+            <p className="label-eyebrow mb-1">Net Cash Flow</p>
             <p className="font-serif text-lg tabular-nums">—</p>
           </div>
         </div>
 
         <div className="mb-10">
           <p className="label-eyebrow mb-5">Holdings</p>
-          <div className="border border-border rounded-sm overflow-hidden">
-            <div className="aspect-[16/9] bg-card">
-              <img
-                src={p.image}
-                alt={p.name}
-                className="w-full h-full object-cover opacity-80"
-              />
-            </div>
-            <div className="px-4 py-4">
-              <p className="font-serif text-base mb-1">{p.name}</p>
-              <p className="text-xs text-muted-foreground mb-4">
-                {p.city} · {p.status}
+          <div className="photo-card mb-4">
+            <img
+              src={p.image}
+              alt={p.name}
+              className="photo-card__img opacity-80"
+            />
+            <span className="photo-card__shade" />
+            <span className="photo-card__meta">
+              <span className="photo-card__kicker">
+                {p.status === "Available" ? `${p.city} · ${p.status}` : p.city}
+              </span>
+              <span className="photo-card__name">{p.name}</span>
+            </span>
+          </div>
+          <div className="glass stat-grid">
+            <div>
+              <p className="label-eyebrow mb-1">Purchase</p>
+              <p className="font-serif text-sm tabular-nums">
+                {fmt.currency(p.purchasePrice)}
               </p>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="label-eyebrow mb-1">Purchase</p>
-                  <p className="font-serif text-sm tabular-nums">
-                    {fmt.currency(p.purchasePrice)}
-                  </p>
-                </div>
-                <div>
-                  <p className="label-eyebrow mb-1">Current value</p>
-                  <p className="font-serif text-sm tabular-nums text-muted-foreground">
-                    —
-                  </p>
-                </div>
-                <div>
-                  <p className="label-eyebrow mb-1">Rent</p>
-                  <p className="font-serif text-sm tabular-nums text-muted-foreground">
-                    —
-                  </p>
-                </div>
-                <div>
-                  <p className="label-eyebrow mb-1">Gross Yield</p>
-                  <p className="font-serif text-sm tabular-nums text-muted-foreground">
-                    —
-                  </p>
-                </div>
-              </div>
+            </div>
+            <div>
+              <p className="label-eyebrow mb-1">Current value</p>
+              <p className="font-serif text-sm tabular-nums text-muted-foreground">
+                —
+              </p>
+            </div>
+            <div>
+              <p className="label-eyebrow mb-1">Rent</p>
+              <p className="font-serif text-sm tabular-nums text-muted-foreground">
+                —
+              </p>
+            </div>
+            <div>
+              <p className="label-eyebrow mb-1">Gross Yield</p>
+              <p className="font-serif text-sm tabular-nums text-muted-foreground">
+                —
+              </p>
             </div>
           </div>
         </div>

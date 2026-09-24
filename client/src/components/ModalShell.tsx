@@ -14,8 +14,14 @@ export function ModalShell({
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    document.body.dataset.modal = String(
+      Number(document.body.dataset.modal ?? 0) + 1
+    );
     return () => {
       document.body.style.overflow = prev;
+      const next = Number(document.body.dataset.modal ?? 1) - 1;
+      if (next <= 0) delete document.body.dataset.modal;
+      else document.body.dataset.modal = String(next);
     };
   }, []);
 
@@ -32,7 +38,7 @@ export function ModalShell({
         onClick={onClose}
       />
       <div
-        className="relative w-full max-w-[430px] bg-background border-t border-border rounded-t-lg pt-3 pb-6 page-px max-h-[88vh] overflow-y-auto animate-fade-up shadow-2xl"
+        className="sheet-panel page-px animate-fade-up"
         style={{ animationDuration: "260ms" }}
       >
         <div className="flex justify-center mb-4">
@@ -65,7 +71,7 @@ export function SuccessState({
 }) {
   return (
     <div className="text-center py-3">
-      <div className="w-12 h-12 rounded-full border border-primary/40 bg-primary/10 flex items-center justify-center mx-auto mb-5">
+      <div className="icon-well w-12 h-12 rounded-full mx-auto mb-5">
         <Check className="w-5 h-5 text-primary" strokeWidth={1.75} />
       </div>
       <h4 className="font-serif text-lg leading-tight mb-2">{headline}</h4>
@@ -74,7 +80,7 @@ export function SuccessState({
       </p>
       <button
         onClick={onClose}
-        className="tap press w-full py-3.5 rounded-sm border border-primary/60 text-primary text-[12px] tracking-[0.12em] uppercase active:bg-primary/5 transition-colors"
+        className="tap press btn-gold"
       >
         Done
       </button>

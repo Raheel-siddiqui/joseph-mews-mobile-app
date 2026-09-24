@@ -4,9 +4,11 @@ import { ModalShell, SuccessState } from "@/components/ModalShell";
 import { advisorEmail } from "@/lib/advisor";
 import { getActiveUser } from "@/lib/session";
 import type { Opportunity } from "@/lib/explore";
-import { CalendarDays, Mail, Phone } from "lucide-react";
+import { CalendarDays, Mail, MessageCircle, Phone } from "lucide-react";
 
-type ContactChannel = "schedule" | "callback" | "email";
+const ADVISOR_WHATSAPP = "03127766363";
+
+type ContactChannel = "schedule" | "callback" | "email" | "whatsapp";
 
 export function ContactAdvisorSheet({
   opp,
@@ -16,8 +18,10 @@ export function ContactAdvisorSheet({
   onClose: () => void;
 }) {
   const user = getActiveUser();
+  const advisorName = user.advisor;
+  const advisorTitle = user.advisorTitle;
+  const advisorMail = advisorEmail();
   const [submitted, setSubmitted] = useState<ContactChannel | null>(null);
-  const email = advisorEmail();
 
   const contactSuccess: Record<
     ContactChannel,
@@ -25,15 +29,19 @@ export function ContactAdvisorSheet({
   > = {
     schedule: {
       headline: "Call request received",
-      body: `${user.advisor} will offer times for a 20-minute consultation within one business day.`,
+      body: `${advisorName} will offer times for a 20-minute consultation within one business day.`,
     },
     callback: {
       headline: "Callback requested",
-      body: `${user.advisor} will call you today between 9am and 6pm GMT.`,
+      body: `${advisorName} will call you today, 9am – 6pm · Karachi · UTC.`,
     },
     email: {
       headline: "Email ready to send",
-      body: `We've prepared a message to ${user.advisor}. Check your inbox for a copy, or they will reply directly.`,
+      body: `We've prepared a message to ${advisorName}. Check your inbox for a copy, or they will reply directly.`,
+    },
+    whatsapp: {
+      headline: "WhatsApp ready",
+      body: `A chat with ${advisorName} is ready on ${ADVISOR_WHATSAPP}.`,
     },
   };
 
@@ -43,11 +51,12 @@ export function ContactAdvisorSheet({
         opp ? `Enquiry — ${opp.name}` : `Schedule a call — ${user.firstName}`,
       );
       const body = encodeURIComponent(
-        opp
-          ? `Hello ${user.advisor},\n\nI would like to discuss ${opp.name} (${opp.reference}), including pricing, mortgage options and allocation timing.\n\nKind regards,\n${user.firstName}`
-          : `Hello ${user.advisor},\n\nI would like to schedule a call to discuss my portfolio.\n\nKind regards,\n${user.firstName}`,
+        `Hello ${advisorName},\n\nI would like to discuss my portfolio.\n\nKind regards,\n${user.firstName}`,
       );
-      window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+      window.location.href = `mailto:${advisorMail}?subject=${subject}&body=${body}`;
+    }
+    if (channel === "whatsapp") {
+      window.open(`https://wa.me/92${ADVISOR_WHATSAPP.slice(1)}`, "_blank");
     }
     setSubmitted(channel);
   };
@@ -59,37 +68,16 @@ export function ContactAdvisorSheet({
       {!submitted || !success ? (
         <>
           <p className="text-[12.5px] text-muted-foreground leading-relaxed mb-6">
-            {opp ? (
-              <>
-                Discuss <span className="text-foreground/85">{opp.name}</span> with
-                your dedicated advisor — including pricing, mortgage options and
-                allocation timing.
-              </>
-            ) : (
-              <>
-                Speak with your dedicated advisor about your portfolio —
-                including performance, next steps and new opportunities.
-              </>
-            )}
+            Speak with your dedicated advisor about your portfolio — including
+            performance, next steps and new opportunities.
           </p>
 
-          <div className="rounded-sm border border-border px-4 py-4 mb-5">
-            <p className="label-eyebrow mb-2">Your Advisor</p>
-            <div className="flex items-center gap-3 mt-1">
-              {user.advisorPhoto && (
-                <img
-                  src={user.advisorPhoto}
-                  alt=""
-                  className="w-12 h-12 rounded-full object-cover"
-                />
-              )}
-              <div className="min-w-0">
-                <p className="font-serif text-lg leading-tight">{user.advisor}</p>
-                <p className="text-[12px] text-muted-foreground mt-0.5">
-                  {user.advisorTitle}
-                </p>
-              </div>
-            </div>
+          <div className="rounded-lg border border-border px-4 py-4 mb-5">
+            <p className="label-eyebrow mb-2">Your advisor</p>
+            <p className="font-serif text-lg leading-tight">{advisorName}</p>
+            <p className="text-[12px] text-muted-foreground mt-0.5">
+              {advisorTitle}
+            </p>
           </div>
 
           <div className="space-y-2.5">
@@ -102,20 +90,26 @@ export function ContactAdvisorSheet({
             <ContactAction
               icon={Phone}
               label="Request a callback"
-              sub="Today, between 9am – 6pm GMT"
+              sub="Today, 9am – 6pm · Karachi · UTC"
               onClick={() => handleChannel("callback")}
             />
             <ContactAction
               icon={Mail}
-              label={`Email ${user.advisor.split(" ")[0]}`}
-              sub={email}
+              label={`Email ${advisorName.split(" ")[0]}`}
+              sub={advisorMail}
               onClick={() => handleChannel("email")}
+            />
+            <ContactAction
+              icon={MessageCircle}
+              label="WhatsApp"
+              sub={ADVISOR_WHATSAPP}
+              onClick={() => handleChannel("whatsapp")}
             />
           </div>
 
           <button
             onClick={onClose}
-            className="tap w-full py-3 mt-6 text-[12px] tracking-[0.12em] uppercase text-muted-foreground active:text-foreground transition-colors"
+            className="btn-quiet w-full mt-6"
           >
             Close
           </button>
@@ -145,11 +139,11 @@ function ContactAction({
   return (
     <button
       onClick={onClick}
-      className="tap press w-full flex items-center gap-3.5 px-4 py-3.5 rounded-sm border border-border active:bg-card/60 transition-colors text-left"
+      className="tap press glass glass--pad w-full flex items-center gap-3.5 text-left"
     >
-      <div className="w-9 h-9 rounded-full border border-border flex items-center justify-center shrink-0">
-        <Icon className="w-3.5 h-3.5 text-primary" strokeWidth={1.5} />
-      </div>
+      <span className="icon-well w-9 h-9">
+        <Icon className="w-3.5 h-3.5" strokeWidth={1.5} />
+      </span>
       <div className="flex-1 min-w-0">
         <p className="text-[13px] font-medium leading-snug">{label}</p>
         <p className="text-[11px] text-muted-foreground mt-0.5">{sub}</p>

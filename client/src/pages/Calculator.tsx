@@ -168,13 +168,11 @@ function CalculatorBody({
     >
       <div className="page-px">
         {/* Title */}
-        <div className="pt-2 pb-7 animate-fade-up">
-          <p className="label-eyebrow mb-3">Run Numbers</p>
-          <h1 className="font-serif text-2xl leading-tight mb-2">
-            {seed.title}
-          </h1>
-          <p className="text-[13px] text-muted-foreground">{seed.subtitle}</p>
-        </div>
+        <header className="page-intro animate-fade-up">
+          <p className="label-eyebrow">Run Numbers</p>
+          <h1 className="page-intro__title">{seed.title}</h1>
+          <p className="page-intro__sub">{seed.subtitle}</p>
+        </header>
 
         {/* ----- INPUTS ----- */}
         <section className="border-t border-border pt-6 pb-2">
@@ -234,7 +232,7 @@ function CalculatorBody({
           <div className="mt-7">
             <button
               onClick={() => setCostsOpen((s) => !s)}
-              className="tap press w-full flex items-center justify-between py-3 border-t border-b border-border text-[10px] tracking-[0.18em] uppercase text-muted-foreground active:text-foreground transition-colors"
+              className="btn-quiet w-full justify-between"
               aria-expanded={costsOpen}
             >
               <span className="inline-flex items-center gap-2">
@@ -272,7 +270,7 @@ function CalculatorBody({
           <h2 className="font-serif text-xl tracking-tight mb-6">Results</h2>
 
           {/* Headline */}
-          <div className="px-5 py-6 rounded-sm border border-border bg-card/40 mb-6">
+          <div className="glass-gold glass--pad mb-6">
             <p className="label-eyebrow mb-3">
               Total Return · {holdingYears}Y
             </p>
@@ -326,7 +324,7 @@ function CalculatorBody({
           <div className="hairline-gold mb-6" />
           <button
             onClick={() => navigate(seed.projectionUrl)}
-            className="tap press w-full flex items-center justify-center gap-2 py-4 rounded-sm bg-primary text-primary-foreground font-medium tracking-wide text-[13px] uppercase active:opacity-90 transition-opacity"
+            className="tap press btn-gold"
           >
             View Full Projection
             <ArrowRight className="w-4 h-4" strokeWidth={1.5} />
@@ -340,7 +338,7 @@ function CalculatorBody({
             strokeWidth={1.5}
           />
           <p className="text-[11px] leading-relaxed text-muted-foreground/80">
-            Calculations follow Joseph Mews' standard model. Figures are
+            Calculations follow Mews One's standard model. Figures are
             estimates based on current assumptions and exclude SDLT, legal fees
             and exit costs.
           </p>
@@ -373,7 +371,7 @@ function CurrencyField({
           <span className="text-[10px] text-muted-foreground/70">{hint}</span>
         )}
       </div>
-      <div className="flex items-center gap-2 border-b border-border focus-within:border-primary/60 transition-colors py-2">
+      <div className="field flex items-center gap-2">
         <span className="font-serif text-base text-muted-foreground/70">£</span>
         <input
           type="number"
@@ -406,7 +404,7 @@ function PercentField({
           <span className="text-[10px] text-muted-foreground/70">{hint}</span>
         )}
       </div>
-      <div className="flex items-center gap-2 border-b border-border focus-within:border-primary/60 transition-colors py-2">
+      <div className="field flex items-center gap-2">
         <input
           type="number"
           inputMode="decimal"
@@ -444,10 +442,8 @@ function YearsField({
             <button
               key={y}
               onClick={() => onChange(y)}
-              className={`tap press flex-1 py-3 rounded-sm border text-sm tabular-nums transition-colors ${
-                active
-                  ? "border-primary text-primary bg-primary/10"
-                  : "border-border text-muted-foreground active:text-foreground"
+              className={`tap press choice flex-1 !min-h-0 !py-3 text-sm tabular-nums ${
+                active ? "choice--on" : ""
               }`}
             >
               {y}

@@ -14,10 +14,10 @@ export function PreviewChip({ label = "Preview · Empty" }: { label?: string }) 
 
 export function AdvisorCta() {
   return (
-    <div className="mt-10 px-5 py-5 border border-border rounded-sm">
+    <div className="glass glass--pad mt-10">
       <p className="label-eyebrow mb-3">Your Advisor</p>
       <p className="font-serif text-base mb-1">{investor.advisor}</p>
-      <p className="text-xs text-muted-foreground mb-4">
+      <p className="text-xs text-muted-foreground mb-2">
         {investor.advisorTitle}
       </p>
       <button
@@ -28,7 +28,7 @@ export function AdvisorCta() {
             body: `Hello ${investor.advisor},\n\nI would like to discuss my portfolio.\n\nKind regards,\n${investor.firstName}`,
           })
         }
-        className="tap text-xs tracking-widest uppercase text-primary active:opacity-70 transition-opacity inline-flex items-center gap-1 min-h-[2.75rem]"
+        className="btn-quiet"
       >
         Contact advisor
         <ArrowRight className="w-3 h-3" strokeWidth={1.5} />
@@ -47,7 +47,7 @@ export function EmptyCentre({
   body: string;
 }) {
   return (
-    <div className="py-16 text-center px-2">
+    <div className="glass glass--pad py-12 text-center">
       <p className="label-eyebrow mb-3">{eyebrow}</p>
       <h2 className="font-serif text-xl tracking-tight mb-3">{title}</h2>
       <p className="text-sm text-muted-foreground leading-relaxed max-w-[300px] mx-auto">

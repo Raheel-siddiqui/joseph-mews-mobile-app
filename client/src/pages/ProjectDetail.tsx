@@ -1,12 +1,14 @@
 // Joseph Mews — Project (Opportunity) Detail
 // Mirrors the rhythm of PropertyDetail: hero, title, sectioned content,
 // ending with a Contact Sales sticky CTA.
-import { useRoute } from "wouter";
+import { Link, useRoute } from "wouter";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { ContactAdvisorSheet } from "@/components/ContactAdvisorSheet";
 import { getOpportunity, type OpportunityStatus } from "@/lib/explore";
 import { fmt } from "@/lib/data";
+import { opportunityGallery } from "@/lib/propertyImage";
+import { PhotoRail } from "@/components/PhotoRail";
 import {
   MORTGAGE_PERSONALISATION_NOTE,
   illustrativeDeposit,
@@ -20,6 +22,7 @@ import {
   MapPin,
   Calendar,
   Building2,
+  ChevronRight,
   Phone,
 } from "lucide-react";
 import NotFound from "./NotFound";
@@ -42,60 +45,58 @@ export default function ProjectDetail() {
 
   if (!opp) return <NotFound />;
 
-  const isInactive = opp.status === "Sold Out";
-
   return (
     <AppShell backTo="/explore" showNav={false}>
       <div className="page-px">
         {/* Hero image */}
-        <div className="aspect-[16/9] rounded-sm overflow-hidden bg-card mb-6 -mx-page sm:mx-0 animate-fade-up relative">
-          <img
-            src={opp.image}
-            alt={opp.name}
-            className="w-full h-full object-cover"
+        <div className="mt-3 mb-4 animate-fade-up">
+          <PhotoRail
+            images={opportunityGallery(opp)}
+            label={opp.name}
+            status={
+              opp.status === "Available" ? (
+                <StatusPill status={opp.status} />
+              ) : undefined
+            }
           />
-          <div className="absolute top-3 left-3">
-            <StatusPill status={opp.status} />
+          <div className="mt-3">
+            <p className="label-eyebrow">{opp.reference}</p>
+            <h1 className="page-intro__title">{opp.name}</h1>
+            <p className="page-intro__sub">
+              {opp.developer} · {opp.city}, {opp.region}
+            </p>
           </div>
         </div>
 
-        {/* Title block */}
-        <div className="mb-7 animate-fade-up" style={{ animationDelay: "60ms" }}>
-          <p className="label-eyebrow mb-3">{opp.reference}</p>
-          <h1 className="font-serif text-2xl leading-tight mb-2">{opp.name}</h1>
-          <p className="text-[13px] text-muted-foreground">
-            {opp.developer} · {opp.city}, {opp.region}
-          </p>
-
-          <p className="text-[13px] leading-relaxed text-foreground/80 mt-5 italic">
-            {opp.tagline}
-          </p>
-        </div>
+        <p
+          className="text-[13px] leading-relaxed text-foreground/80 mb-6 animate-fade-up"
+          style={{ animationDelay: "60ms" }}
+        >
+          {opp.tagline}
+        </p>
 
         {/* SECTION 1: AT A GLANCE */}
         <Section>
-          <div className="mb-6">
-            <p className="label-eyebrow mb-3">Starting Price</p>
-            <h2 className="font-serif num-hero leading-none tracking-tight tabular-nums mb-3">
-              {fmt.currency(opp.fromPrice)}
-            </h2>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="inline-flex items-center gap-1 text-primary tabular-nums">
+          <div className="pd-value mb-4">
+            <p className="label-eyebrow pd-value__label">Starting Price</p>
+            <h2 className="pd-value__amount">{fmt.currency(opp.fromPrice)}</h2>
+            <p className="inline-flex items-center gap-2 text-sm">
+              <span className="inline-flex items-center gap-1 text-positive tabular-nums">
                 <ArrowUpRight className="w-3.5 h-3.5" strokeWidth={1.75} />
                 +{opp.capitalGrowth5Y.toFixed(0)}%
               </span>
-              <span className="text-muted-foreground">·</span>
-              <span className="text-muted-foreground">5-year capital growth (forecast)</span>
-            </div>
+              <span className="text-muted-foreground">
+                · expected capital growth (forecast)
+              </span>
+            </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-x-3 gap-y-5 pt-5 border-t border-border">
+          <div className="glass stat-grid">
             <DataPoint label="Gross Yield" value={`${opp.grossYield.toFixed(1)}%`} sub="Estimated" />
             <DataPoint label="Completion" value={opp.expectedCompletion} sub={opp.tenure} />
             <DataPoint
-              label="Availability"
-              value={`${opp.unitsAvailable}/${opp.totalUnits}`}
-              sub={isInactive ? "Sold out" : "Units remaining"}
+              label="Available Units"
+              value={`${opp.unitsAvailable}`}
             />
           </div>
         </Section>
@@ -117,21 +118,22 @@ export default function ProjectDetail() {
             annualMortgage: 0,
             costGrowth: 2.5,
           }}
-          hasMortgage={false}
+          hasMortgage={opp.illustrativeMortgage != null}
+          mortgageRate={opp.illustrativeMortgage?.rate}
         />
 
         <Divider />
 
         {/* HIGHLIGHTS */}
         <Section title="Why This Opportunity">
-          <ul className="space-y-5">
+          <ul className="glass-list">
             {opp.highlights.map((h, i) => (
               <li
                 key={i}
-                className="flex items-start gap-4 animate-fade-up"
+                className="flex items-start gap-3 py-3.5 animate-fade-up"
                 style={{ animationDelay: `${i * 60}ms` }}
               >
-                <span className="mt-1.5 w-3 h-px bg-primary shrink-0" />
+                <span className="dash-ins__mark mt-1.5" />
                 <p className="text-[13px] leading-relaxed text-foreground/85">
                   {h}
                 </p>
@@ -144,7 +146,7 @@ export default function ProjectDetail() {
 
         {/* SECTION 5: KEY FACTS */}
         <Section title="Key Facts">
-          <div className="space-y-4">
+          <div className="glass-list">
             <InfoRow icon={Building2} label="Developer" value={opp.developer} />
             <InfoRow icon={MapPin} label="Location" value={`${opp.city} · ${opp.postcode}`} />
             <InfoRow icon={Calendar} label="Expected Completion" value={opp.expectedCompletion} />
@@ -157,6 +159,44 @@ export default function ProjectDetail() {
                   : opp.tenure
               }
             />
+          </div>
+        </Section>
+
+        <Divider />
+
+        <Section title="Payment Plan">
+          <p className="label-eyebrow mb-1.5">Developer payment schedule</p>
+          <p className="text-[12px] text-muted-foreground mb-6">
+            Developer staged schedule based on starting price{" "}
+            {fmt.currency(opp.fromPrice)}
+          </p>
+          <div className="glass-list">
+            {[
+              { label: "Reservation Fee", when: "Now", percent: 1 },
+              { label: "Exchange Deposit", when: "On exchange", percent: 19 },
+            ].map((stage) => (
+              <div
+                key={stage.label}
+                className="flex items-start justify-between gap-4 py-3.5"
+              >
+                <div>
+                  <p className="text-sm">{stage.label}</p>
+                  <p className="text-[12px] text-muted-foreground mt-0.5">
+                    {stage.when}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm tabular-nums">
+                    {fmt.currency(
+                      Math.round((opp.fromPrice * stage.percent) / 100)
+                    )}
+                  </p>
+                  <p className="text-[12px] text-muted-foreground mt-0.5 tabular-nums">
+                    {stage.percent}%
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
         </Section>
 
@@ -189,7 +229,7 @@ export default function ProjectDetail() {
                 );
                 return (
                   <>
-                    <div className="grid grid-cols-2 gap-x-3 gap-y-5 mb-7">
+                    <div className="glass stat-grid mb-7">
                       <DataPoint
                         label="Deposit"
                         value={fmt.currency(deposit)}
@@ -226,6 +266,27 @@ export default function ProjectDetail() {
           )}
         </Section>
 
+        <Divider />
+
+        <Section title="Updates">
+          <Link
+            href={`/explore/${opp.id}/content`}
+            className="glass glass--pad flex items-center gap-3"
+          >
+            <img
+              src={opportunityGallery(opp)[0]}
+              alt=""
+              className="h-14 w-14 shrink-0 rounded-md object-cover"
+            />
+            <span className="min-w-0 flex-1">
+              <span className="block font-serif text-lg leading-tight">
+                {opp.name}
+              </span>
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+          </Link>
+        </Section>
+
         <div className="h-6" />
 
         {/* Spacer so sticky CTA bar never overlaps last content */}
@@ -255,21 +316,15 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="py-7 animate-fade-up">
-      {title && (
-        <div className="flex items-baseline justify-between mb-6">
-          <div>
-            <h3 className="font-serif text-xl tracking-tight">{title}</h3>
-          </div>
-        </div>
-      )}
+    <section className="mb-10 animate-fade-up">
+      {title && <h3 className="section-kicker">{title}</h3>}
       {children}
     </section>
   );
 }
 
 function Divider() {
-  return <div className="hairline" />;
+  return null;
 }
 
 function DataPoint({
@@ -297,20 +352,14 @@ function DataPoint({
 }
 
 function StatusPill({ status }: { status: OpportunityStatus }) {
-  const styles =
+  const tone =
     status === "Available"
-      ? "border-primary/40 text-primary bg-background/85"
+      ? "chip chip--gold chip--on-photo"
       : status === "Coming Soon"
-      ? "border-amber-500/40 text-amber-500/90 bg-background/85"
-      : "border-muted-foreground/40 text-muted-foreground bg-background/85";
+        ? "chip chip--warn chip--on-photo"
+        : "chip chip--muted chip--on-photo";
 
-  return (
-    <span
-      className={`text-[10px] tracking-[0.18em] uppercase px-2.5 py-1 border rounded-sm backdrop-blur-sm ${styles}`}
-    >
-      {status}
-    </span>
-  );
+  return <span className={tone}>{status}</span>;
 }
 
 function InfoRow({
@@ -323,10 +372,10 @@ function InfoRow({
   value: string;
 }) {
   return (
-    <div className="flex items-center gap-4">
-      <div className="w-10 h-10 rounded-full border border-border flex items-center justify-center flex-shrink-0">
-        <Icon className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
-      </div>
+    <div className="flex items-center gap-4 py-3.5">
+      <span className="icon-well">
+        <Icon className="w-4 h-4" strokeWidth={1.5} />
+      </span>
       <div className="flex-1">
         <p className="text-[10px] tracking-[0.14em] uppercase text-muted-foreground mb-0.5">
           {label}
@@ -342,23 +391,14 @@ function InfoRow({
 
 function StickyCta({ onContact }: { onContact: () => void }) {
   return (
-    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-40 pointer-events-none">
-      <div className="h-6 bg-gradient-to-t from-background to-transparent" />
-      <div className="bg-background/95 backdrop-blur-md border-t border-border pointer-events-auto">
-        <div className="page-px pt-3.5 pb-3">
-          <button
-            onClick={onContact}
-            className="tap press w-full flex items-center justify-center gap-2 py-3.5 rounded-sm bg-primary text-primary-foreground font-medium tracking-[0.08em] text-[12.5px] uppercase active:opacity-90 transition-opacity"
-          >
-            <Phone className="w-3.5 h-3.5" strokeWidth={1.75} />
-            Contact Sales
-          </button>
-          <p className="text-[10.5px] text-muted-foreground/75 text-center mt-2.5 leading-snug">
-            Your advisor will handle next steps
-          </p>
-        </div>
-        <div className="pb-safe" />
-      </div>
+    <div className="sticky-cta">
+      <button onClick={onContact} className="tap press btn-gold">
+        <Phone className="w-3.5 h-3.5" strokeWidth={1.75} />
+        Contact Sales
+      </button>
+      <p className="text-[10.5px] text-muted-foreground/75 text-center mt-2 leading-snug">
+        Your advisor will handle next steps
+      </p>
     </div>
   );
 }

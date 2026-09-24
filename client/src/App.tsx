@@ -5,10 +5,13 @@ import { Redirect, Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import Portfolio from "./pages/Portfolio";
 import PropertyDetail from "./pages/PropertyDetail";
+import ContentDetail from "./pages/ContentDetail";
 import Documents from "./pages/Documents";
+import Profile from "./pages/Profile";
 import Explore from "./pages/Explore";
 import ProjectDetail from "./pages/ProjectDetail";
 import Calculator from "./pages/Calculator";
@@ -36,11 +39,15 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Login} />
+      <Route path="/signup" component={Signup} />
       <Route path="/dashboard">
         {() => <InvestorOnly component={Dashboard} />}
       </Route>
       <Route path="/portfolio">
         {() => <InvestorOnly component={Portfolio} />}
+      </Route>
+      <Route path="/property/:id/content">
+        {() => <InvestorOnly component={ContentDetail} />}
       </Route>
       <Route path="/property/:id">
         {() => <InvestorOnly component={PropertyDetail} />}
@@ -48,7 +55,9 @@ function Router() {
       <Route path="/documents">
         {() => <InvestorOnly component={Documents} />}
       </Route>
+      <Route path="/profile" component={Profile} />
       <Route path="/explore" component={Explore} />
+      <Route path="/explore/:id/content" component={ContentDetail} />
       <Route path="/explore/:id" component={ProjectDetail} />
       <Route path="/calculator/:source/:id" component={Calculator} />
       <Route path="/calculator" component={CalculatorHome} />

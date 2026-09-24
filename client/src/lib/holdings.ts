@@ -2,6 +2,7 @@
 import {
   activities,
   documents,
+  pennyPlace,
   portfolio,
   portfolioHistory,
   properties,
@@ -12,8 +13,8 @@ import {
 } from "@/lib/data";
 import { getPersona } from "@/lib/session";
 
-/** Single-holding demo investor owns Mayfair only. */
-export const SINGLE_PROPERTY_ID = "JM-001";
+/** Single-holding demo investor owns Penny Place only. */
+export const SINGLE_PROPERTY_ID = pennyPlace.id;
 
 export type PortfolioSnapshot = {
   totalInvested: number;
@@ -85,9 +86,7 @@ export function isSingleHolding(): boolean {
 }
 
 export function getActiveProperties(): Property[] {
-  if (isSingleHolding()) {
-    return properties.filter((p) => p.id === SINGLE_PROPERTY_ID);
-  }
+  if (isSingleHolding()) return [pennyPlace];
   return properties;
 }
 
@@ -114,13 +113,12 @@ export function getActivePortfolio(): PortfolioSnapshot {
     };
   }
 
-  // Mayfair-only deltas — modest rent uplift + steady capital appreciation
   return buildPortfolio(getActiveProperties(), {
-    trailing12mReturn: 80000,
-    trailing12mReturnPct: 5.0,
-    grossYieldDelta: 0.12,
-    netCashFlowDelta: 120,
-    netCashFlowDeltaPct: 5.9,
+    trailing12mReturn: 34813,
+    trailing12mReturnPct: 16.98,
+    grossYieldDelta: 0,
+    netCashFlowDelta: 0,
+    netCashFlowDeltaPct: 0,
   });
 }
 

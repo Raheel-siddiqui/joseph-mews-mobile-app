@@ -51,27 +51,21 @@ export default function PreviewHub() {
   return (
     <AppShell showNav={false} backTo="/dashboard" title="Preview">
       <div className="page-px">
-        <div className="pt-4 pb-7 animate-fade-up">
-          <p className="label-eyebrow mb-2">Client review</p>
-          <h1 className="font-serif text-2xl sm:text-3xl tracking-tight mb-3">
-            Preview hub
-          </h1>
-          <p className="text-sm text-muted-foreground leading-relaxed">
+        <header className="page-intro animate-fade-up">
+          <p className="label-eyebrow">Client review</p>
+          <h1 className="page-intro__title">Preview hub</h1>
+          <p className="page-intro__sub">
             Compare loaded and empty journeys without changing the live demo.
-            Open <span className="text-foreground/85">Loaded</span> for the
-            signed-off experience, or{" "}
-            <span className="text-foreground/85">Empty</span> for the empty-state
-            screen.
+            Open Loaded for the signed-off experience, or Empty for the
+            empty-state screen.
           </p>
-        </div>
+        </header>
 
-        <div className="hairline mb-2" />
-
-        <div className="divide-y divide-border">
+        <div className="glass-list">
           {JOURNEYS.map((j, i) => (
             <div
               key={j.name}
-              className="py-6 animate-fade-up"
+              className="py-4 animate-fade-up"
               style={{ animationDelay: `${i * 40}ms` }}
             >
               <div className="mb-4">
@@ -92,7 +86,7 @@ export default function PreviewHub() {
           ))}
         </div>
 
-        <div className="mt-8 mb-10 px-4 py-4 border border-dashed border-border rounded-sm">
+        <div className="glass glass--pad mt-6 mb-10">
           <p className="text-[12.5px] text-muted-foreground leading-relaxed">
             Tip: Empty screens show a{" "}
             <span className="text-primary">Preview · Empty</span> chip so they
@@ -117,11 +111,7 @@ function StateLink({
   return (
     <Link
       href={href}
-      className={`tap press inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-sm border text-[11px] tracking-[0.14em] uppercase min-h-[40px] transition-colors ${
-        primary
-          ? "border-primary/60 text-primary active:bg-primary/5"
-          : "border-border text-muted-foreground active:text-foreground active:bg-card/60"
-      }`}
+      className={`tap press pill ${primary ? "pill--on" : ""}`}
     >
       {label}
       {primary ? (

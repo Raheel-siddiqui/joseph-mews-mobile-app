@@ -15,15 +15,11 @@ export default function EmptyPortfolio() {
           <PreviewChip />
         </div>
 
-        <div className="pt-2 pb-6 animate-fade-up">
-          <p className="label-eyebrow mb-2">Holdings</p>
-          <h1 className="font-serif text-2xl sm:text-3xl tracking-tight mb-1">
-            Portfolio
-          </h1>
-          <p className="text-sm text-muted-foreground">0 properties</p>
-        </div>
-
-        <div className="hairline mb-2" />
+        <header className="page-intro animate-fade-up">
+          <p className="label-eyebrow">Holdings</p>
+          <h1 className="page-intro__title">Portfolio</h1>
+          <p className="page-intro__sub">0 properties</p>
+        </header>
 
         <EmptyCentre
           eyebrow="No holdings yet"

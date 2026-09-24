@@ -26,12 +26,10 @@ export default function EmptyDashboard() {
           <PreviewChip />
         </div>
 
-        <div className="pt-1 pb-7 animate-fade-up">
-          <p className="label-eyebrow mb-1.5">{greeting}</p>
-          <h1 className="font-serif text-[1.375rem] tracking-tight">
-            {investor.firstName}
-          </h1>
-        </div>
+        <header className="page-intro animate-fade-up">
+          <p className="label-eyebrow">{greeting}</p>
+          <h1 className="page-intro__title">{investor.firstName}</h1>
+        </header>
 
         <EmptyCentre
           eyebrow="Portfolio"
@@ -39,26 +37,19 @@ export default function EmptyDashboard() {
           body="We’re linking your holdings and documents. You’ll see live figures here once your advisor completes set-up."
         />
 
-        <div className="hairline-gold my-8" />
-
-        <div className="grid grid-cols-3 gap-1.5 mb-8 opacity-60">
+        <div className="glass stat-grid stat-grid--3 mb-4 opacity-70">
           <DashMetric label="Invested" value="—" />
           <DashMetric label="Equity" value="—" />
           <DashMetric label="Loans" value="—" />
         </div>
 
-        <div className="space-y-5 mb-4 opacity-60">
-          <div>
-            <p className="text-[10px] tracking-[0.16em] uppercase text-muted-foreground mb-1">
-              Gross Yield
-            </p>
+        <div className="glass-list mb-6 opacity-70">
+          <div className="py-3.5">
+            <p className="label-eyebrow mb-1">Gross Yield</p>
             <p className="font-serif text-lg tabular-nums">—</p>
           </div>
-          <div className="hairline" />
-          <div>
-            <p className="text-[10px] tracking-[0.16em] uppercase text-muted-foreground mb-1">
-              Net Cash Flow
-            </p>
+          <div className="py-3.5">
+            <p className="label-eyebrow mb-1">Net Cash Flow</p>
             <p className="font-serif text-lg tabular-nums">—</p>
           </div>
         </div>

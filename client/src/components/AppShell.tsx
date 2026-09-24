@@ -8,7 +8,6 @@ import {
   ChevronLeft,
   Compass,
   Calculator as CalculatorIcon,
-  Mail,
 } from "lucide-react";
 import { LOGO_URL } from "@/lib/data";
 import {
@@ -17,9 +16,17 @@ import {
   isInvestor,
   userInitials,
 } from "@/lib/session";
-import { advisorEmail, openAdvisorMail } from "@/lib/advisor";
-import { ModalShell } from "@/components/ModalShell";
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
+
+const GRADIENT_KEY = "jm_screen_gradient";
+
+function readScreenGradient(): boolean {
+  try {
+    return localStorage.getItem(GRADIENT_KEY) === "on";
+  } catch {
+    return false;
+  }
+}
 
 interface AppShellProps {
   children: ReactNode;
@@ -37,7 +44,18 @@ export function AppShell({
   title,
 }: AppShellProps) {
   const [location] = useLocation();
-  const [profileOpen, setProfileOpen] = useState(false);
+
+  useEffect(() => {
+    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+    window.scrollTo(0, 0);
+  }, [location]);
+  const [gradientOn, setGradientOn] = useState(readScreenGradient);
+
+  useEffect(() => {
+    const sync = () => setGradientOn(readScreenGradient());
+    window.addEventListener("jm-screen-gradient", sync);
+    return () => window.removeEventListener("jm-screen-gradient", sync);
+  }, []);
   const investorMode = isInvestor();
   const homePath = homePathForPersona();
   const user = getActiveUser();
@@ -45,10 +63,17 @@ export function AppShell({
   return (
     <div className="min-h-screen bg-background grain">
       <div className="phone-shell bg-background relative">
-        <div className="phone-wash" aria-hidden="true" />
+        <div
+          className={`phone-wash${gradientOn ? " phone-wash--on" : ""}`}
+          aria-hidden="true"
+        />
         {showHeader && (
-          <header className="sticky top-0 z-40 bg-background/30 backdrop-blur-xl pt-safe">
-            <div className="flex items-center justify-between page-px h-14">
+          <header
+            className={`sticky top-0 z-40 backdrop-blur-xl pt-safe ${
+              backTo ? "bg-background/92" : "bg-background/30"
+            }`}
+          >
+            <div className="relative flex items-center justify-between page-px h-14">
               {backTo ? (
                 <Link
                   href={backTo}
@@ -61,20 +86,22 @@ export function AppShell({
                 <Link href={homePath} className="tap flex items-center gap-2.5 -ml-1 h-11 px-1">
                   <img
                     src={LOGO_URL}
-                    alt="Joseph Mews"
+                    alt="Mews One"
                     className="app-header__logo"
                   />
                   <span className="font-serif text-[15px] tracking-tight leading-none">
-                    Joseph Mews
+                    Mews One
                   </span>
                 </Link>
               )}
               {title && (
-                <span className="font-serif text-base">{title}</span>
+                <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 font-serif text-base">
+                  {title}
+                </span>
               )}
               {!title && !backTo && (
-                <button
-                  onClick={() => setProfileOpen(true)}
+                <Link
+                  href="/profile"
                   className="tap w-11 h-11 -mr-1 rounded-full flex items-center justify-center active:opacity-70 transition-opacity"
                   aria-label="Profile"
                 >
@@ -89,7 +116,7 @@ export function AppShell({
                       {userInitials(user)}
                     </span>
                   )}
-                </button>
+                </Link>
               )}
             </div>
           </header>
@@ -156,94 +183,7 @@ export function AppShell({
           </nav>
         )}
 
-        {profileOpen && (
-          <ProfileSheet onClose={() => setProfileOpen(false)} />
-        )}
       </div>
-    </div>
-  );
-}
-
-function ProfileSheet({ onClose }: { onClose: () => void }) {
-  const user = getActiveUser();
-  const investorMode = isInvestor();
-
-  return (
-    <ModalShell onClose={onClose} title="Your profile">
-      {user.photo && (
-        <img
-          src={user.photo}
-          alt=""
-          className="w-16 h-16 rounded-full object-cover mb-4"
-        />
-      )}
-      <p className="text-[12.5px] text-muted-foreground leading-relaxed mb-6">
-        {investorMode
-          ? "Profile details are managed by your advisor. Contact them to request an update."
-          : "You’re browsing as a guest. Speak with your advisor when you’re ready to invest."}
-      </p>
-
-      <div className="rounded-sm border border-border px-4 py-4 mb-4 space-y-4">
-        <ProfileRow label="Name" value={user.name} />
-        <div className="hairline" />
-        <ProfileRow label="Email" value={user.email} />
-        <div className="hairline" />
-        <ProfileRow label="Member since" value={user.memberSince} />
-        <div className="hairline" />
-        <ProfileRow label="Tier" value={user.tier} />
-      </div>
-
-      <div className="rounded-sm border border-border px-4 py-4 mb-6">
-        <p className="label-eyebrow mb-2">Your Advisor</p>
-        <div className="flex items-center gap-3 mt-1">
-          {user.advisorPhoto && (
-            <img
-              src={user.advisorPhoto}
-              alt=""
-              className="w-11 h-11 rounded-full object-cover"
-            />
-          )}
-          <div className="min-w-0">
-            <p className="font-serif text-lg leading-tight">{user.advisor}</p>
-            <p className="text-[12px] text-muted-foreground mt-0.5">
-              {user.advisorTitle}
-            </p>
-            <p className="text-[12px] text-muted-foreground mt-2">
-              {advisorEmail()}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <button
-        onClick={() =>
-          openAdvisorMail({
-            subject: `Profile enquiry — ${user.name}`,
-            body: `Hello ${user.advisor},\n\nI would like to discuss my profile details.\n\nKind regards,\n${user.firstName}`,
-          })
-        }
-        className="tap press w-full flex items-center justify-center gap-2 py-3.5 rounded-sm bg-primary text-primary-foreground font-medium tracking-[0.08em] text-[12.5px] uppercase active:opacity-90 transition-opacity"
-      >
-        <Mail className="w-3.5 h-3.5" strokeWidth={1.75} />
-        Contact advisor
-      </button>
-      <button
-        onClick={onClose}
-        className="tap w-full py-3 mt-2 text-[12px] tracking-[0.12em] uppercase text-muted-foreground active:text-foreground transition-colors"
-      >
-        Close
-      </button>
-    </ModalShell>
-  );
-}
-
-function ProfileRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-[10px] tracking-[0.14em] uppercase text-muted-foreground mb-0.5">
-        {label}
-      </p>
-      <p className="text-sm">{value}</p>
     </div>
   );
 }

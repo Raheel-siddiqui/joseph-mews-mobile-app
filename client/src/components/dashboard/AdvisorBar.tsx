@@ -35,7 +35,7 @@ export function AdvisorBar({
         <span className="dash-advisor__name">{name}</span>
         <span className="dash-advisor__title">{title}</span>
       </span>
-      <span className="dash-advisor__cta">Call</span>
+      <span className="dash-advisor__cta">Contact</span>
     </button>
   );
 }

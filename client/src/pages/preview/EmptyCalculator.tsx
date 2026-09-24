@@ -16,19 +16,15 @@ export default function EmptyCalculator() {
           <PreviewChip />
         </div>
 
-        <div className="pt-2 pb-6 animate-fade-up">
-          <p className="label-eyebrow mb-2">Your investment plan</p>
-          <h1 className="font-serif text-2xl tracking-tight mb-2">
-            No exact match yet
-          </h1>
-          <p className="text-sm text-muted-foreground leading-relaxed">
+        <header className="page-intro animate-fade-up">
+          <p className="label-eyebrow">Your investment plan</p>
+          <h1 className="page-intro__title">No exact match yet</h1>
+          <p className="page-intro__sub">
             Nothing in the current inventory fits this capital and finance
             route. Change the plan, or speak with an advisor about the closest
             option.
           </p>
-        </div>
-
-        <div className="hairline mb-2" />
+        </header>
 
         <EmptyCentre
           eyebrow="Funding gap"
@@ -38,7 +34,7 @@ export default function EmptyCalculator() {
 
         <Link
           href="/calculator"
-          className="tap press mt-4 w-full flex items-center justify-center gap-2 py-3.5 rounded-sm border border-primary/60 text-primary text-[12px] tracking-[0.12em] uppercase active:bg-primary/5 transition-colors"
+          className="tap press btn-gold mt-4"
         >
           Change capital
           <ArrowRight className="w-3.5 h-3.5" strokeWidth={1.5} />

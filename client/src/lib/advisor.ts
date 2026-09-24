@@ -14,7 +14,7 @@ export function openAdvisorMail(opts?: {
 }) {
   const user = getActiveUser();
   const subject = encodeURIComponent(
-    opts?.subject ?? `Enquiry — Joseph Mews`
+    opts?.subject ?? `Enquiry — Mews One`
   );
   const body = encodeURIComponent(
     opts?.body ??

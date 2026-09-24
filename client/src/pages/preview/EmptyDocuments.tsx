@@ -15,15 +15,11 @@ export default function EmptyDocuments() {
           <PreviewChip />
         </div>
 
-        <div className="pt-2 pb-6 animate-fade-up">
-          <p className="label-eyebrow mb-2">Library</p>
-          <h1 className="font-serif text-2xl sm:text-3xl tracking-tight mb-1">
-            Documents
-          </h1>
-          <p className="text-sm text-muted-foreground">0 files</p>
-        </div>
-
-        <div className="hairline mb-2" />
+        <header className="page-intro animate-fade-up">
+          <p className="label-eyebrow">Library</p>
+          <h1 className="page-intro__title">Documents</h1>
+          <p className="page-intro__sub">0 files</p>
+        </header>
 
         <EmptyCentre
           eyebrow="Document vault"
