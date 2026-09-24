@@ -1326,9 +1326,9 @@
     align-items: stretch;
     padding: 0.28rem 0.35rem;
     border-radius: 1.35rem;
-    background: oklch(0.182 0.031 261 / 0.58);
-    backdrop-filter: blur(36px) saturate(1.6);
-    -webkit-backdrop-filter: blur(36px) saturate(1.6);
+    background: oklch(0.16 0.028 261);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     box-shadow:
       inset 0 1px 0 oklch(0.945 0.012 75 / 0.16),
       0 10px 28px -16px oklch(0.05 0.03 261 / 0.7);
