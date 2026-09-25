@@ -8,10 +8,6 @@ import {
   Wallet,
 } from "lucide-react";
 import { TrendLine } from "@/components/TrendLine";
-import {
-  PropertyBanner,
-  type BannerSlide,
-} from "@/components/dashboard/PropertyBanner";
 import { RangePills } from "@/components/dashboard/RangePills";
 import { fmt, type TimeRange } from "@/lib/data";
 import type { PortfolioPoint } from "@/lib/data";
@@ -20,7 +16,6 @@ export function DashboardHero({
   greeting,
   firstName,
   single,
-  slides,
   currentValue,
   returnAmount,
   returnPct,
@@ -39,7 +34,6 @@ export function DashboardHero({
   greeting: string;
   firstName: string;
   single: boolean;
-  slides: BannerSlide[];
   currentValue: number;
   returnAmount: number;
   returnPct: number;
@@ -66,8 +60,6 @@ export function DashboardHero({
           <h1 className="dash-hero__name">{firstName}</h1>
         </div>
       </div>
-
-      <PropertyBanner slides={slides} />
 
       <div className="dash-hero__account">
         <p className="label-eyebrow dash-hero__value-label">

@@ -3,7 +3,7 @@
 // - Hero number is the star (Portfolio Value in serif)
 // - Supporting metrics sit as light native surfaces, not a dashboard table
 import { AppShell } from "@/components/AppShell";
-import { filterByRange, fmt, timeRangeLabels, type TimeRange } from "@/lib/data";
+import { filterByRange, timeRangeLabels, type TimeRange } from "@/lib/data";
 import {
   getActivePortfolio,
   getActivePortfolioHistory,
@@ -11,7 +11,6 @@ import {
   isSingleHolding,
 } from "@/lib/holdings";
 import { buildIntelligence } from "@/lib/intelligence";
-import { propertyImageSrc } from "@/lib/propertyImage";
 import { getActiveUser } from "@/lib/session";
 import { useEffect, useMemo, useState } from "react";
 import { ContactAdvisorSheet } from "@/components/ContactAdvisorSheet";
@@ -19,7 +18,6 @@ import { AdvisorBar } from "@/components/dashboard/AdvisorBar";
 import { DashboardHero } from "@/components/dashboard/DashboardHero";
 import { DashboardHighlights } from "@/components/dashboard/DashboardHighlights";
 import { DashboardInsights } from "@/components/dashboard/DashboardInsights";
-import { DashboardUpdates } from "@/components/dashboard/DashboardUpdates";
 import { HoldingsRail } from "@/components/dashboard/HoldingsRail";
 
 export default function Dashboard() {
@@ -65,14 +63,6 @@ export default function Dashboard() {
   const returnPct = isAll ? portfolio.totalReturnPct : rangeReturn.pct;
 
   const sole = properties[0];
-  const bannerSlides = properties.map((property) => ({
-    id: property.id,
-    href: `/property/${property.id}`,
-    image: propertyImageSrc(property),
-    loc: property.city.split(" ")[0],
-    name: property.name,
-    value: fmt.currency(property.currentValue),
-  }));
 
   return (
     <AppShell>
@@ -82,7 +72,6 @@ export default function Dashboard() {
             greeting={greeting}
             firstName={user.firstName}
             single={single}
-            slides={bannerSlides}
             currentValue={portfolio.currentValue}
             returnAmount={returnAmount}
             returnPct={returnPct}
@@ -108,7 +97,6 @@ export default function Dashboard() {
         />
         <DashboardHighlights intelligence={intelligence} />
         <DashboardInsights />
-        <DashboardUpdates />
 
         <AdvisorBar
           name={user.advisor}
