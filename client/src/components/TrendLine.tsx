@@ -194,7 +194,7 @@ export function TrendLine<T extends Record<string, any>>({
                 tick={{
                   fill: "#C8C0B4",
                   fontSize: 11,
-                  fontFamily: "Inter, sans-serif",
+                  fontFamily: "Museo, sans-serif",
                 }}
                 dy={8}
               />
@@ -207,7 +207,7 @@ export function TrendLine<T extends Record<string, any>>({
                 tick={{
                   fill: "#C8C0B4",
                   fontSize: 11,
-                  fontFamily: "Inter, sans-serif",
+                  fontFamily: "Museo, sans-serif",
                 }}
                 tickFormatter={(n: number) => yAxisLabel(n, scale.step)}
               />

@@ -100,7 +100,7 @@ function App() {
                 background: "#1C1C1C",
                 border: "1px solid rgba(245, 241, 232, 0.08)",
                 color: "#F5F1E8",
-                fontFamily: "Inter, sans-serif",
+                fontFamily: "Museo, sans-serif",
               },
             }}
           />

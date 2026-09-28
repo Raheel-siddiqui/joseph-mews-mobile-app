@@ -3,11 +3,96 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Joseph Mews — Private Banking Modernism
+/* Mews One — Private Banking Modernism
    - Deep navy background (#0A1220), never pure black
    - Champagne gold (#C6A46C) used as punctuation only
-   - Mixed typography: Fraunces serif for display, Inter for UI, JetBrains Mono for IDs
+   - New Spirit Condensed for display, Museo for UI
 */
+
+@font-face {
+  font-family: "Museo";
+  src: url("/fonts/Museo100-Regular.otf") format("opentype");
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Museo";
+  src: url("/fonts/Museo300-Regular.otf") format("opentype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Museo";
+  src: url("/fonts/Museo500-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Museo";
+  src: url("/fonts/Museo500-Regular.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Museo";
+  src: url("/fonts/Museo700-Regular.otf") format("opentype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Museo";
+  src: url("/fonts/Museo700-Regular.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Museo";
+  src: url("/fonts/Museo900-Regular.otf") format("opentype");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "New Spirit Condensed";
+  src: url("/fonts/NewSpirit-LightCondensed.otf") format("opentype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "New Spirit Condensed";
+  src: url("/fonts/NewSpirit-RegularCondensed.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "New Spirit Condensed";
+  src: url("/fonts/NewSpirit-MediumCondensed.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "New Spirit Condensed";
+  src: url("/fonts/NewSpirit-SemiBoldCondensed.otf") format("opentype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "New Spirit Condensed";
+  src: url("/fonts/NewSpirit-BoldCondensed.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
@@ -53,9 +138,9 @@
   --color-positive: var(--positive);
   --color-negative: var(--negative);
 
-  --font-serif: 'Fraunces', Georgia, serif;
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+  --font-serif: "New Spirit Condensed", serif;
+  --font-sans: "Museo", sans-serif;
+  --font-mono: "Museo", sans-serif;
 }
 
 :root {
@@ -154,7 +239,6 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
-    font-feature-settings: "ss01", "cv11";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
@@ -174,7 +258,6 @@
   /* Editorial typography utilities */
   .font-serif {
     font-family: var(--font-serif);
-    font-feature-settings: "ss01", "ss02";
   }
   .font-mono {
     font-family: var(--font-mono);
