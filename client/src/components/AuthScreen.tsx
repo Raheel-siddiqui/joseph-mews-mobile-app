@@ -25,7 +25,7 @@ export function AuthScreen({
           <img
             src={LOGO_URL}
             alt="Mews One"
-            className="w-16 h-16 rounded-[22%] mb-7 shadow-2xl"
+            className="w-16 h-16 rounded-[22%] object-cover mb-7 shadow-2xl"
           />
           <p className="label-eyebrow mb-3">Investor Platform</p>
           <h1 className="page-intro__title text-center">{title}</h1>

@@ -605,7 +605,7 @@ export const documents: Document[] = [
   },
 ];
 
-export const LOGO_URL = "/joseph-mews-logo.svg";
+export const LOGO_URL = "/mews-one-logo.jpg";
 export const HERO_TEXTURE = "/hero-texture.jpg";
 
 // Currency formatter
