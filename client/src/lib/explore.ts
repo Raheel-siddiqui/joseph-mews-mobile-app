@@ -27,6 +27,8 @@ export interface Opportunity {
   image: string;
   tagline: string;         // short editorial line
   status: OpportunityStatus;
+  /** Advisor-curated highlight on Explore list cards. */
+  recommended?: boolean;
   unitTypes: UnitOption[]; // available unit configurations
   fromPrice: number;       // overall starting price
   grossYield: number;      // %
@@ -128,6 +130,7 @@ export const opportunities: Opportunity[] = [
       "https://d2xsxph8kpxj0f.cloudfront.net/113764710/ETLftU46Rt6EamfGSt3aTE/property-birmingham-jewel-mkDpyiZhsxCZGkHHiMENAm.webp",
     tagline: "Boutique residences in Birmingham's reimagined Southside cultural district.",
     status: "Available",
+    recommended: true,
     unitTypes: [
       { type: "Studio", fromPrice: 198000, sqftFrom: 410, available: 12, total: 24 },
       { type: "1-bed", fromPrice: 235000, sqftFrom: 540, available: 16, total: 36 },
@@ -206,9 +209,60 @@ export function getOpportunity(id: string) {
   return opportunities.find((o) => o.id === id);
 }
 
+/** Upcoming market areas — not live opportunities yet. */
+export interface ComingSoonArea {
+  id: string;
+  name: string;
+  city: string;
+  region: string;
+  image: string;
+  summary: string;
+  expectedWindow: string;
+}
+
+export const comingSoonAreas: ComingSoonArea[] = [
+  {
+    id: "AREA-LEEDS",
+    name: "Leeds Riverside",
+    city: "Leeds",
+    region: "Yorkshire",
+    image: "/properties/leeds.jpg",
+    summary:
+      "Waterfront regeneration with strong tenant demand and infrastructure growth through the late 2020s.",
+    expectedWindow: "Expected from late 2027",
+  },
+  {
+    id: "AREA-LIVERPOOL",
+    name: "Liverpool Waterfront",
+    city: "Liverpool",
+    region: "North West",
+    image: "/properties/liverpool.jpg",
+    summary:
+      "City-centre living near the waterfront, positioned for yield-led investors ahead of the next release.",
+    expectedWindow: "Expected from early 2028",
+  },
+  {
+    id: "AREA-NEXT",
+    name: "Glasgow Central",
+    city: "Glasgow",
+    region: "Scotland",
+    image: "/properties/explore-next.jpg",
+    summary:
+      "A high-yield city pipeline in early curation — register to hear first when units are released.",
+    expectedWindow: "Pipeline in curation",
+  },
+];
+
+export function getComingSoonArea(id: string) {
+  return comingSoonAreas.find((a) => a.id === id);
+}
+
 // Cities derived dynamically so the filter chips never go stale.
 export const opportunityCities = Array.from(
-  new Set(opportunities.map((o) => o.city))
+  new Set([
+    ...opportunities.map((o) => o.city),
+    ...comingSoonAreas.map((a) => a.city),
+  ])
 ).sort();
 
 // Pre-canned budget bands — kept simple for non-technical investors.

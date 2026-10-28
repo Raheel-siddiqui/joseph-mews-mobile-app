@@ -75,6 +75,25 @@ export default function ProjectDetail() {
           {opp.tagline}
         </p>
 
+        <Section title="Development Assets">
+          <Link
+            href={`/explore/${opp.id}/content`}
+            className="glass glass--pad flex items-center gap-3"
+          >
+            <img
+              src={opportunityGallery(opp)[0]}
+              alt=""
+              className="h-14 w-14 shrink-0 rounded-md object-cover"
+            />
+            <span className="min-w-0 flex-1">
+              <span className="block font-serif text-lg leading-tight">
+                {opp.name}
+              </span>
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+          </Link>
+        </Section>
+
         {/* SECTION 1: AT A GLANCE */}
         <Section>
           <div className="pd-value mb-4">
@@ -264,27 +283,6 @@ export default function ProjectDetail() {
               {opp.mortgagePlanSummary}
             </p>
           )}
-        </Section>
-
-        <Divider />
-
-        <Section title="Updates">
-          <Link
-            href={`/explore/${opp.id}/content`}
-            className="glass glass--pad flex items-center gap-3"
-          >
-            <img
-              src={opportunityGallery(opp)[0]}
-              alt=""
-              className="h-14 w-14 shrink-0 rounded-md object-cover"
-            />
-            <span className="min-w-0 flex-1">
-              <span className="block font-serif text-lg leading-tight">
-                {opp.name}
-              </span>
-            </span>
-            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-          </Link>
         </Section>
 
         <div className="h-6" />
