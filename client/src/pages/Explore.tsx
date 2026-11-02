@@ -1,6 +1,6 @@
 // Joseph Mews — Explore (Curated Investment Marketplace)
 // Design language: matches the rest of the app (warm charcoal, hairlines,
-// champagne gold). Tabs: All · Recommended · Coming Soon. Filters stay
+// champagne gold). Recommended properties lead; See all opens the full list. Filters stay
 // compact so listings lead. Coming Soon areas are visually separate from
 // live opportunities, with Register Interest → enquiry capture.
 import { AppShell } from "@/components/AppShell";
@@ -26,16 +26,12 @@ import { Link } from "wouter";
 import { useMemo, useState } from "react";
 import { SlidersHorizontal, ChevronDown, X, Check } from "lucide-react";
 
-type ExploreTab = "all" | "recommended" | "coming-soon";
-
-const TABS: { id: ExploreTab; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "recommended", label: "Recommended" },
-  { id: "coming-soon", label: "Coming Soon" },
-];
-
 export default function Explore() {
-  const [tab, setTab] = useState<ExploreTab>("all");
+  const [propertyView, setPropertyView] = useState(
+    opportunities.some((o) => o.status === "Available" && o.recommended)
+      ? "recommended"
+      : "all",
+  );
   const [city, setCity] = useState<string>("All");
   const [budget, setBudget] = useState<string>("any");
   const [yld, setYld] = useState<string>("any");
@@ -75,26 +71,33 @@ export default function Explore() {
   if (city !== "All") {
     activeChips.push({ id: "city", label: city, clear: () => setCity("All") });
   }
-  if (budget !== "any" && tab !== "coming-soon") {
+  if (budget !== "any" && propertyView !== "coming-soon") {
     const b = budgetBands.find((b) => b.id === budget);
     if (b) activeChips.push({ id: "budget", label: b.label, clear: () => setBudget("any") });
   }
-  if (yld !== "any" && tab !== "coming-soon") {
+  if (yld !== "any" && propertyView !== "coming-soon") {
     const y = yieldBands.find((y) => y.id === yld);
     if (y) activeChips.push({ id: "yield", label: y.label, clear: () => setYld("any") });
+  }
+  if (propertyView === "coming-soon") {
+    activeChips.push({ id: "properties", label: "Coming Soon", clear: () => setPropertyView("all") });
   }
   const activeCount = activeChips.length;
 
   const availableCount = opportunities.filter((o) => o.status === "Available").length;
 
   const resetAll = () => {
+    setPropertyView("all");
     setCity("All");
     setBudget("any");
     setYld("any");
   };
 
-  const listForTab =
-    tab === "recommended" ? recommended : tab === "all" ? available : [];
+  const showingRecommended = propertyView === "recommended";
+  const visibleProperties = showingRecommended ? recommended : available;
+  const resultCount = propertyView === "coming-soon"
+    ? comingSoon.length
+    : visibleProperties.length + (propertyView === "all" ? comingSoon.length : 0);
 
   return (
     <AppShell>
@@ -113,30 +116,6 @@ export default function Explore() {
             )}
           </p>
         </header>
-
-        {/* Tabs */}
-        <div
-          className="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 mb-4 animate-fade-up"
-          role="tablist"
-          aria-label="Explore views"
-          style={{ animationDelay: "40ms" }}
-        >
-          {TABS.map((item) => {
-            const active = tab === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setTab(item.id)}
-                className={`tap press pill shrink-0 ${active ? "pill--on" : ""}`}
-              >
-                {item.label}
-              </button>
-            );
-          })}
-        </div>
 
         {/* Compact filter bar — budget/yield only for live inventory */}
         <div className="animate-fade-up" style={{ animationDelay: "60ms" }}>
@@ -186,6 +165,17 @@ export default function Explore() {
           {filtersOpen && (
             <div className="glass glass--pad mt-3 space-y-4 animate-fade-up">
               <FilterRow
+                label="Properties"
+                activeId={propertyView}
+                options={[
+                  { id: "all", label: "All" },
+                  { id: "recommended", label: "Recommended" },
+                  { id: "coming-soon", label: "Coming Soon" },
+                ]}
+                onChange={setPropertyView}
+              />
+              <div className="hairline" />
+              <FilterRow
                 label="City"
                 activeId={city}
                 options={[
@@ -194,7 +184,7 @@ export default function Explore() {
                 ]}
                 onChange={setCity}
               />
-              {tab !== "coming-soon" && (
+              {propertyView !== "coming-soon" && (
                 <>
                   <div className="hairline" />
                   <FilterRow
@@ -231,18 +221,15 @@ export default function Explore() {
                   onClick={() => setFiltersOpen(false)}
                   className="tap press pill pill--on"
                 >
-                  {tab === "coming-soon"
-                    ? `Show ${comingSoon.length} ${comingSoon.length === 1 ? "area" : "areas"}`
-                    : `Show ${listForTab.length} ${listForTab.length === 1 ? "result" : "results"}`}
+                  {`Show ${resultCount} ${resultCount === 1 ? "result" : "results"}`}
                 </button>
               </div>
             </div>
           )}
         </div>
 
-        {/* Tab content */}
         <div className="mt-5">
-          {tab === "coming-soon" ? (
+          {propertyView === "coming-soon" ? (
             <ComingSoonList
               areas={comingSoon}
               registeredTick={registeredTick}
@@ -250,31 +237,45 @@ export default function Explore() {
             />
           ) : (
             <>
-              {listForTab.length === 0 ? (
-                <div className="py-16 text-center">
-                  <p className="label-eyebrow mb-2">No matches</p>
-                  <p className="text-sm text-muted-foreground">
-                    {tab === "recommended"
-                      ? "No recommended properties match your filters"
-                      : "Adjust your filters to see more opportunities"}
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {listForTab.map((o, i) => (
-                    <OpportunityCard key={o.id} opp={o} index={i} />
-                  ))}
-                </div>
-              )}
-
-              {/* ALL: Coming Soon remains reachable even with recommended assigned */}
-              {tab === "all" && comingSoon.length > 0 && (
-                <ComingSoonSection
-                  areas={comingSoon}
-                  registeredTick={registeredTick}
-                  onRegister={setInterestArea}
-                />
-              )}
+          <div className="flex items-center justify-between mb-4">
+            <p className="section-kicker mb-0">
+              {showingRecommended ? "Recommended properties" : "All properties"}
+            </p>
+          </div>
+          {visibleProperties.length === 0 ? (
+            <div className="py-16 text-center">
+              <p className="label-eyebrow mb-2">No matches</p>
+              <p className="text-sm text-muted-foreground">
+                Adjust your filters to see more opportunities
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {visibleProperties.map((o, i) => (
+                <OpportunityCard key={o.id} opp={o} index={i} />
+              ))}
+            </div>
+          )}
+          {showingRecommended && (
+            <div className="mt-5 flex justify-start">
+              <button
+                type="button"
+                onClick={() => {
+                  resetAll();
+                }}
+                className="btn-quiet"
+              >
+                click here to see all our properties
+              </button>
+            </div>
+          )}
+          {!showingRecommended && comingSoon.length > 0 && (
+            <ComingSoonSection
+              areas={comingSoon}
+              registeredTick={registeredTick}
+              onRegister={setInterestArea}
+            />
+          )}
             </>
           )}
         </div>
@@ -374,19 +375,23 @@ function ComingSoonCard({
       className="coming-soon-card animate-fade-up"
       style={{ animationDelay: `${index * 50}ms` }}
     >
-      <div className="coming-soon-card__media">
-        <img src={area.image} alt={area.name} className="coming-soon-card__img" />
-        <span className="photo-card__chip">
-          <span className="chip chip--warn chip--on-photo">Coming Soon</span>
-        </span>
-      </div>
       <div className="coming-soon-card__body">
-        <p className="label-eyebrow mb-1.5">
-          {area.city} · {area.region}
-        </p>
-        <h3 className="font-serif text-xl tracking-tight leading-tight mb-2">
-          {area.name}
-        </h3>
+        <div className="coming-soon-card__header">
+          <div className="min-w-0">
+            <p className="label-eyebrow mb-1.5">
+              {area.city} · {area.region}
+            </p>
+            <h3 className="font-serif text-xl tracking-tight leading-tight mb-1">
+              {area.name}
+            </h3>
+            <p className="text-[9px] uppercase tracking-[0.14em] text-primary">
+              Coming Soon
+            </p>
+          </div>
+          <div className="coming-soon-card__media">
+            <img src={area.image} alt={area.name} className="coming-soon-card__img" />
+          </div>
+        </div>
         <p className="text-[13px] text-muted-foreground leading-relaxed mb-2">
           {area.summary}
         </p>
