@@ -22,9 +22,9 @@ const GRADIENT_KEY = "jm_screen_gradient";
 
 function readScreenGradient(): boolean {
   try {
-    return localStorage.getItem(GRADIENT_KEY) === "on";
+    return localStorage.getItem(GRADIENT_KEY) !== "off";
   } catch {
-    return false;
+    return true;
   }
 }
 
